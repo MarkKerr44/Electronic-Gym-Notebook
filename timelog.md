@@ -99,4 +99,8 @@
 - Added authentication to the app - 2 hours
 - Partially added the exercise library - 2 hours
 
+**Tuesday 15th October**
+- Created weekly status report - 45 minutes
+- Fixed ExerciseLibraryScreen.tsx, now displays data for all the different exercises, images are the only exception - 2.5 hours
+
 
