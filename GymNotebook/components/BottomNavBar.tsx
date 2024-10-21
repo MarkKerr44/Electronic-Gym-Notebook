@@ -1,5 +1,3 @@
-// components/BottomNavBar.tsx
-
 import React from 'react';
 import {
   View,
@@ -28,15 +26,15 @@ const tabs = [
     screen: 'WorkoutSelectionScreen',
   },
   {
-    key: 'progress',
-    title: 'Progress',
-    icon: 'bar-chart',
+    key: 'detector',
+    title: 'Detector',
+    icon: 'radar', // Updated icon for the detector tab
     screen: 'GymEquipmentDetectorScreen',
   },
   {
-    key: 'notes',
-    title: 'Notes',
-    icon: 'notes',
+    key: 'library',
+    title: 'Library',
+    icon: 'menu-book', // Updated icon for the library tab
     screen: 'ExerciseLibraryScreen',
   },
 ];
@@ -83,6 +81,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
                 name={tab.icon}
                 size={30}
                 color={index === tabIndex ? '#FFD700' : '#B0B0B0'} // Gold for active, light gray for inactive
+                style={index === tabIndex && styles.activeIcon} // Optional glow effect for active icon
               />
               <Text
                 style={[
@@ -136,9 +135,13 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     height: '100%',
+    paddingHorizontal: 20, // More spacing to give a luxurious feel
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
   tabButton: {
     flex: 1,
+    alignItems: 'center',
   },
   iconContainer: {
     alignItems: 'center',
@@ -147,15 +150,25 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 12,
+    fontWeight: '500',
     marginTop: 4,
+    textTransform: 'uppercase', // Small uppercase for a refined look
+    letterSpacing: 1, // Letter spacing for better readability
   },
   activeIndicator: {
     position: 'absolute',
     bottom: 0,
-    width: Dimensions.get('window').width / tabs.length,
+    width: Dimensions.get('window').width / tabs.length - 40, // Subtle padding for the indicator
     height: 4,
     backgroundColor: '#FFD700', // Gold color for the active indicator
-    left: 0,
+    left: 20, // Align with padding
+    borderRadius: 2, // Rounded corners for a more premium feel
+  },
+  activeIcon: {
+    shadowColor: '#FFD700', // Adding shadow for the active icon (luxurious glow)
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
   },
 });
 
