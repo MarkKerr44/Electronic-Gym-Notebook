@@ -9,39 +9,27 @@ import {
   Easing,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 
 interface BottomNavBarProps {
   index: number;
   setIndex: (index: number) => void;
 }
 
-const ACTIVE_COLOR = '#2196F3'; 
-
 const tabs = [
-  { key: 'home', title: 'Home', icon: 'home', route: '/DashboardScreen' },
-  { key: 'workout', title: 'Workout', icon: 'fitness-center', route: '/WorkoutSelectionScreen' },
-  {
-    key: 'posture',
-    title: 'Posture',
-    icon: 'radar',
-    route: '/PoseEstimatorScreen', 
-  },
-  {
-    key: 'library',
-    title: 'Library',
-    icon: 'menu-book',
-    route: '/ExerciseLibraryScreen',
-  },
+  { key: 'home', title: 'Home', icon: 'home', screen: 'DashboardScreen' },
+  { key: 'workout', title: 'Workout', icon: 'fitness-center', screen: 'WorkoutSelectionScreen' },
+  { key: 'detector', title: 'Detector', icon: 'radar', screen: 'GymEquipmentDetectorScreen' },
+  { key: 'library', title: 'Library', icon: 'menu-book', screen: 'ExerciseLibraryScreen' },
 ];
+
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
   const { width } = Dimensions.get('window');
   const tabWidth = width / tabs.length;
-
   const translateValue = React.useRef(new Animated.Value(index * tabWidth)).current;
-  const router = useRouter();
+  const navigation = useNavigation();
 
   React.useEffect(() => {
     Animated.timing(translateValue, {
@@ -50,58 +38,60 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
       easing: Easing.out(Easing.exp),
       useNativeDriver: true,
     }).start();
-  }, [index, tabWidth, translateValue]);
+  }, [index]);
 
   const handleTabPress = (tabIndex: number) => {
     if (index === tabIndex) return;
     setIndex(tabIndex);
-    router.push(tabs[tabIndex].route);
+    navigation.navigate(tabs[tabIndex].screen as never);
   };
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient */}
       <LinearGradient
-        colors={['#232526', '#414345']}
+        colors={['#232526', '#414345']} // Dark gray gradient
         style={styles.gradientBackground}
       />
 
+      {/* Tab Icons */}
       <View style={styles.tabContainer}>
-        {tabs.map((tab, tabIndex) => {
-          const isActive = index === tabIndex;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => handleTabPress(tabIndex)}
-              style={styles.tabButton}
-            >
-              <View style={styles.iconContainer}>
-                <MaterialIcons
-                  name={tab.icon}
-                  size={30}
-                  color={isActive ? ACTIVE_COLOR : '#B0B0B0'}
-                  style={isActive && styles.activeIcon}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: isActive ? ACTIVE_COLOR : '#B0B0B0' },
-                  ]}
-                >
-                  {tab.title}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {tabs.map((tab, tabIndex) => (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => handleTabPress(tabIndex)}
+            style={styles.tabButton}
+          >
+            <View style={styles.iconContainer}>
+              <MaterialIcons
+                name={tab.icon}
+                size={30}
+                color={index === tabIndex ? '#FFD700' : '#B0B0B0'} // Gold for active, light gray for inactive
+                style={index === tabIndex && styles.activeIcon} // Optional glow effect for active icon
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: index === tabIndex ? '#FFD700' : '#B0B0B0' },
+                ]}
+              >
+                {tab.title}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      
+      {/* Active Indicator */}
       <Animated.View
         style={[
           styles.activeIndicator,
           {
-            width: tabWidth, 
-            transform: [{ translateX: translateValue }],
+            transform: [
+              {
+                translateX: translateValue,
+              },
+            ],
           },
         ]}
       />
@@ -131,7 +121,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     height: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 20, // More spacing to give a luxurious feel
     justifyContent: 'space-around',
     alignItems: 'center',
   },
@@ -148,18 +138,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    textTransform: 'uppercase', // Small uppercase for a refined look
+    letterSpacing: 1, // Letter spacing for better readability
   },
   activeIndicator: {
     position: 'absolute',
     bottom: 0,
+    width: Dimensions.get('window').width / tabs.length - 40, // Subtle padding for the indicator
     height: 4,
-    backgroundColor: ACTIVE_COLOR,
-    borderRadius: 2,
+    backgroundColor: '#FFD700', // Gold color for the active indicator
+    left: 20, // Align with padding
+    borderRadius: 2, // Rounded corners for a more premium feel
   },
   activeIcon: {
-    shadowColor: '#2196F3',
+    shadowColor: '#FFD700', // Adding shadow for the active icon (luxurious glow)
     shadowOpacity: 0.8,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 0 },

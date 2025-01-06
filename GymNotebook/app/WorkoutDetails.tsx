@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -12,117 +12,114 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
+} from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { LinearGradient } from 'expo-linear-gradient'
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist'
 
 interface Exercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: number;
-  rest: number;
+  id: string
+  name: string
+  sets: number
+  reps: number
+  rest: number
 }
 
 interface Workout {
-  id: string;
-  name: string;
-  exercises: Exercise[];
+  id: string
+  name: string
+  exercises: Exercise[]
 }
 
-const WorkoutDetailsScreen: React.FC = () => {
-  const router = useRouter();
-  const { workoutId } = useLocalSearchParams<{ workoutId: string }>();
-  const [workout, setWorkout] = useState<Workout | null>(null);
-  const [isEditingName, setIsEditingName] = useState<boolean>(false);
-  const [workoutName, setWorkoutName] = useState<string>('');
-  const [isModalVisible, setModalVisible] = useState<boolean>(false);
-  const [exercisesData, setExercisesData] = useState<Exercise[]>([]);
-  const [selectedExercisesInModal, setSelectedExercisesInModal] = useState<Exercise[]>([]);
-  
-  const [isEditModalVisible, setEditModalVisible] = useState<boolean>(false);
-  const [editExercise, setEditExercise] = useState<Exercise | null>(null);
-  const [tempSets, setTempSets] = useState<number>(3);
-  const [tempReps, setTempReps] = useState<number>(10);
-  const [tempRest, setTempRest] = useState<number>(60);
+export default function WorkoutDetailsScreen() {
+  const router = useRouter()
+  const { workoutId } = useLocalSearchParams<{ workoutId: string }>()
+  const [workout, setWorkout] = useState<Workout | null>(null)
+  const [isEditingName, setIsEditingName] = useState<boolean>(false)
+  const [workoutName, setWorkoutName] = useState<string>('')
+  const [isModalVisible, setModalVisible] = useState<boolean>(false)
+  const [exercisesData, setExercisesData] = useState<Exercise[]>([])
+  const [selectedExercisesInModal, setSelectedExercisesInModal] = useState<Exercise[]>([])
+  const [isEditModalVisible, setEditModalVisible] = useState<boolean>(false)
+  const [editExercise, setEditExercise] = useState<Exercise | null>(null)
+  const [tempSets, setTempSets] = useState<number>(3)
+  const [tempReps, setTempReps] = useState<number>(10)
+  const [tempRest, setTempRest] = useState<number>(60)
 
   useEffect(() => {
-    loadWorkout();
-  }, []);
+    loadWorkout()
+  }, [])
+
+  useEffect(() => {
+    loadExercisesData()
+  }, [])
 
   const loadWorkout = async () => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      const foundWorkout = parsedWorkouts.find((w) => w.id === workoutId);
+      const storedWorkouts = await AsyncStorage.getItem('workouts')
+      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : []
+      const foundWorkout = parsedWorkouts.find((w) => w.id === workoutId)
       if (foundWorkout) {
-        setWorkout(foundWorkout);
-        setWorkoutName(foundWorkout.name);
+        setWorkout(foundWorkout)
+        setWorkoutName(foundWorkout.name)
       } else {
-        Alert.alert('Workout not found');
-        router.back();
+        Alert.alert('Workout not found')
+        router.back()
       }
-    } catch (error) {
-      console.error('Failed to load workout', error);
-    }
-  };
+    } catch (error) {}
+  }
+
+  const loadExercisesData = async () => {
+    const data = await import('../exercises.json')
+    setExercisesData(data.default)
+  }
 
   const saveWorkout = async (updatedWorkout: Workout) => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      const workoutIndex = parsedWorkouts.findIndex((w) => w.id === workoutId);
+      const storedWorkouts = await AsyncStorage.getItem('workouts')
+      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : []
+      const workoutIndex = parsedWorkouts.findIndex((w) => w.id === workoutId)
       if (workoutIndex !== -1) {
-        parsedWorkouts[workoutIndex] = updatedWorkout;
-        await AsyncStorage.setItem('workouts', JSON.stringify(parsedWorkouts));
-        setWorkout(updatedWorkout);
+        parsedWorkouts[workoutIndex] = updatedWorkout
+        await AsyncStorage.setItem('workouts', JSON.stringify(parsedWorkouts))
+        setWorkout(updatedWorkout)
       }
-    } catch (error) {
-      console.error('Failed to save workout', error);
-    }
-  };
+    } catch (error) {}
+  }
 
   const handleEditWorkoutName = () => {
-    setIsEditingName(true);
-  };
+    setIsEditingName(true)
+  }
 
   const handleSaveWorkoutName = () => {
     if (workout) {
-      const updatedWorkout = { ...workout, name: workoutName };
-      saveWorkout(updatedWorkout);
-      setIsEditingName(false);
+      const updatedWorkout = { ...workout, name: workoutName }
+      saveWorkout(updatedWorkout)
+      setIsEditingName(false)
     }
-  };
+  }
 
   const handleDeleteExercise = (exerciseId: string) => {
     if (workout) {
-      const updatedExercises = workout.exercises.filter((e) => e.id !== exerciseId);
-      const updatedWorkout = { ...workout, exercises: updatedExercises };
-      saveWorkout(updatedWorkout);
+      const updatedExercises = workout.exercises.filter((e) => e.id !== exerciseId)
+      const updatedWorkout = { ...workout, exercises: updatedExercises }
+      saveWorkout(updatedWorkout)
     }
-  };
+  }
 
   const handleEditExercise = (exercise: Exercise) => {
-    setEditExercise(exercise);
-    setTempSets(exercise.sets);
-    setTempReps(exercise.reps);
-    setTempRest(exercise.rest);
-    setEditModalVisible(true);
-  };
-
-  useEffect(() => {
-    const loadExercisesData = async () => {
-      const data = await import('../exercises.json');
-      setExercisesData(data.default);
-    };
-    loadExercisesData();
-  }, []);
+    setEditExercise(exercise)
+    setTempSets(exercise.sets)
+    setTempReps(exercise.reps)
+    setTempRest(exercise.rest)
+    setEditModalVisible(true)
+  }
 
   const handleAddExercises = () => {
-    setModalVisible(true);
-  };
+    setModalVisible(true)
+  }
 
   const addExercisesToWorkout = () => {
     if (workout) {
@@ -132,17 +129,32 @@ const WorkoutDetailsScreen: React.FC = () => {
         sets: 3,
         reps: 10,
         rest: 60,
-      }));
-      const updatedWorkout = { ...workout, exercises: [...workout.exercises, ...newExercises] };
-      saveWorkout(updatedWorkout);
-      setSelectedExercisesInModal([]);
-      setModalVisible(false);
+      }))
+      const updatedWorkout = { ...workout, exercises: [...workout.exercises, ...newExercises] }
+      saveWorkout(updatedWorkout)
+      setSelectedExercisesInModal([])
+      setModalVisible(false)
     }
-  };
-
-  if (!workout) {
-    return null;
   }
+
+  const renderExerciseItem = ({ item, drag }: RenderItemParams<Exercise>) => {
+    return (
+      <View style={styles.exerciseCard}>
+        <TouchableOpacity style={styles.exerciseInfo} onLongPress={drag} onPress={() => handleEditExercise(item)}>
+          <Text style={styles.exerciseName}>{item.name}</Text>
+          <Text style={styles.setsRepsText}>
+            {item.sets} sets x {item.reps} reps
+          </Text>
+          <Text style={styles.restText}>Rest: {item.rest} seconds</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteExerciseButton} onPress={() => handleDeleteExercise(item.id)}>
+          <MaterialIcons name="delete" size={24} color="#ff5f6d" />
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  if (!workout) return null
 
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
@@ -166,65 +178,39 @@ const WorkoutDetailsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-
-        <ScrollView style={styles.exercisesContainer}>
-          {workout.exercises.map((exercise) => (
-            <View key={exercise.id} style={styles.exerciseCard}>
-              <TouchableOpacity
-                style={styles.exerciseInfo}
-                onPress={() => handleEditExercise(exercise)}
-              >
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.setsRepsText}>
-                  {exercise.sets} sets x {exercise.reps} reps
-                </Text>
-                <Text style={styles.restText}>Rest: {exercise.rest} seconds</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteExerciseButton}
-                onPress={() => handleDeleteExercise(exercise.id)}
-              >
-                <MaterialIcons name="delete" size={24} color="#ff5f6d" />
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          <TouchableOpacity style={styles.addExerciseButton} onPress={handleAddExercises}>
-            <LinearGradient
-              colors={['#FF5F6D', '#FFC371']}
-              style={styles.addExerciseButtonGradient}
-            >
-              <MaterialIcons name="add-circle" size={30} color="#fff" />
-              <Text style={styles.addExerciseButtonText}>Add Exercises</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </ScrollView>
-
+        <DraggableFlatList
+          data={workout.exercises}
+          keyExtractor={(item) => item.id}
+          onDragEnd={({ data }) => {
+            if (workout) {
+              const updatedWorkout = { ...workout, exercises: data }
+              saveWorkout(updatedWorkout)
+            }
+          }}
+          renderItem={renderExerciseItem}
+          containerStyle={styles.draggableList}
+        />
+        <TouchableOpacity style={styles.addExerciseButton} onPress={handleAddExercises}>
+          <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.addExerciseButtonGradient}>
+            <MaterialIcons name="add-circle" size={30} color="#fff" />
+            <Text style={styles.addExerciseButtonText}>Add Exercises</Text>
+          </LinearGradient>
+        </TouchableOpacity>
         <View style={styles.startWorkoutButtonContainer}>
           <TouchableOpacity
             style={styles.startWorkoutButton}
             onPress={() => {
-              router.push({
-                pathname: '/StartWorkout',
-                params: { workoutId: workout.id },
-              });
+              router.push({ pathname: '/StartWorkout', params: { workoutId: workout.id } })
             }}
           >
-            <LinearGradient
-              colors={['#FF5F6D', '#FFC371']}
-              style={styles.startWorkoutButtonGradient}
-            >
+            <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.startWorkoutButtonGradient}>
               <MaterialIcons name="play-circle-filled" size={30} color="#fff" />
               <Text style={styles.startWorkoutButtonText}>Start Workout</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
-
         <Modal visible={isModalVisible} transparent={true} animationType="slide">
-          <KeyboardAvoidingView
-            style={styles.modalContainer}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
+          <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Exercises</Text>
@@ -232,27 +218,18 @@ const WorkoutDetailsScreen: React.FC = () => {
                   <MaterialIcons name="close" size={24} color="#ffffff" />
                 </TouchableOpacity>
               </View>
-
               <FlatList
                 data={exercisesData}
                 renderItem={({ item }) => {
-                  const isSelected = selectedExercisesInModal.some((e) => e.id === item.id);
+                  const isSelected = selectedExercisesInModal.some((e) => e.id === item.id)
                   return (
                     <TouchableOpacity
-                      style={[
-                        styles.exerciseItem,
-                        isSelected && styles.exerciseItemSelected,
-                      ]}
+                      style={[styles.exerciseItem, isSelected && styles.exerciseItemSelected]}
                       onPress={() => {
                         if (isSelected) {
-                          setSelectedExercisesInModal((prevSelected) =>
-                            prevSelected.filter((e) => e.id !== item.id)
-                          );
+                          setSelectedExercisesInModal((prevSelected) => prevSelected.filter((e) => e.id !== item.id))
                         } else {
-                          setSelectedExercisesInModal((prevSelected) => [
-                            ...prevSelected,
-                            item,
-                          ]);
+                          setSelectedExercisesInModal((prevSelected) => [...prevSelected, item])
                         }
                       }}
                     >
@@ -263,17 +240,13 @@ const WorkoutDetailsScreen: React.FC = () => {
                         color={isSelected ? '#FFC371' : '#ffffff'}
                       />
                     </TouchableOpacity>
-                  );
+                  )
                 }}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
                 style={styles.exerciseList}
               />
-
-              <TouchableOpacity
-                style={styles.addSelectedExercisesButton}
-                onPress={addExercisesToWorkout}
-              >
+              <TouchableOpacity style={styles.addSelectedExercisesButton} onPress={addExercisesToWorkout}>
                 <Text style={styles.addSelectedExercisesButtonText}>
                   Add {selectedExercisesInModal.length} Exercises
                 </Text>
@@ -281,12 +254,8 @@ const WorkoutDetailsScreen: React.FC = () => {
             </View>
           </KeyboardAvoidingView>
         </Modal>
-
         <Modal visible={isEditModalVisible} transparent={true} animationType="slide">
-          <KeyboardAvoidingView
-            style={styles.modalContainer}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
+          <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Exercise</Text>
@@ -294,7 +263,6 @@ const WorkoutDetailsScreen: React.FC = () => {
                   <MaterialIcons name="close" size={24} color="#ffffff" />
                 </TouchableOpacity>
               </View>
-
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Sets</Text>
                 <TextInput
@@ -322,7 +290,6 @@ const WorkoutDetailsScreen: React.FC = () => {
                   onChangeText={(text) => setTempRest(Number(text))}
                 />
               </View>
-
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={() => {
@@ -334,14 +301,14 @@ const WorkoutDetailsScreen: React.FC = () => {
                           sets: tempSets,
                           reps: tempReps,
                           rest: tempRest,
-                        };
+                        }
                       } else {
-                        return e;
+                        return e
                       }
-                    });
-                    const updatedWorkout = { ...workout, exercises: updatedExercises };
-                    saveWorkout(updatedWorkout);
-                    setEditModalVisible(false);
+                    })
+                    const updatedWorkout = { ...workout, exercises: updatedExercises }
+                    saveWorkout(updatedWorkout)
+                    setEditModalVisible(false)
                   }
                 }}
               >
@@ -352,8 +319,8 @@ const WorkoutDetailsScreen: React.FC = () => {
         </Modal>
       </SafeAreaView>
     </LinearGradient>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   gradientBackground: {
@@ -385,8 +352,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     flex: 1,
   },
-  exercisesContainer: {
-    flex: 1,
+  draggableList: {
+    flexGrow: 1,
     paddingHorizontal: 20,
   },
   exerciseCard: {
@@ -533,6 +500,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-});
-
-export default WorkoutDetailsScreen;
+})

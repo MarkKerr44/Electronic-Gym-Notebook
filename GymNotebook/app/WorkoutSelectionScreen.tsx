@@ -52,7 +52,7 @@ const WorkoutSelectionScreen: React.FC = () => {
   const [index, setIndex] = React.useState(1);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const translateAnim = React.useRef(new Animated.Value(100)).current;
-  const router = useRouter(); 
+  const router = useRouter();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -61,7 +61,6 @@ const WorkoutSelectionScreen: React.FC = () => {
       easing: Easing.out(Easing.exp),
       useNativeDriver: true,
     }).start();
-
     Animated.timing(translateAnim, {
       toValue: 0,
       duration: 1200,
@@ -71,16 +70,18 @@ const WorkoutSelectionScreen: React.FC = () => {
   }, []);
 
   const handleCreateNewWorkout = () => {
-    router.push('/createWorkout'); 
+    router.push('/createWorkout');
   };
 
   const handleMyWorkouts = () => {
-    router.push('/MyWorkoutsScreen'); 
+    router.push('/MyWorkoutsScreen');
   };
 
-  const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {
-    console.log('Navigate to Premade Workout Details', workout);
+  const handleViewWorkoutHistory = () => {
+    router.push('/WorkoutHistoryScreen');
   };
+
+  const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {};
 
   const renderPremadeWorkoutItem = ({ item }: { item: PremadeWorkout }) => (
     <TouchableOpacity
@@ -145,11 +146,10 @@ const WorkoutSelectionScreen: React.FC = () => {
             />
           </Animated.View>
 
-          <TouchableOpacity style={styles.historyButton}>
+          <TouchableOpacity style={styles.historyButton} onPress={handleViewWorkoutHistory}>
             <Text style={styles.historyButtonText}>View Workout History</Text>
           </TouchableOpacity>
         </ScrollView>
-
         <BottomNavBar index={index} setIndex={setIndex} />
       </SafeAreaView>
     </LinearGradient>

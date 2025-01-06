@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -8,154 +8,167 @@ import {
   SafeAreaView,
   TextInput,
   Platform,
-  Animated,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
+  Keyboard,
+} from 'react-native'
+import { MaterialIcons } from '@expo/vector-icons'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { LinearGradient } from 'expo-linear-gradient'
 
 interface Exercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: number;
-  rest: number;
+  id: string
+  name: string
+  sets: number
+  reps: number
+  rest: number
 }
 
 interface Workout {
-  id: string;
-  name: string;
-  exercises: Exercise[];
+  id: string
+  name: string
+  exercises: Exercise[]
 }
 
 interface ExerciseLog {
-  exerciseId: string;
-  exerciseName: string;
+  exerciseId: string
+  exerciseName: string
   sets: {
-    setNumber: number;
-    actualReps: number;
-  }[];
+    setNumber: number
+    actualReps: number
+  }[]
 }
 
 interface WorkoutLog {
-  workoutId: string;
-  workoutName: string;
-  date: string;
-  exercises: ExerciseLog[];
+  workoutId: string
+  workoutName: string
+  date: string
+  exercises: ExerciseLog[]
 }
 
-const StartWorkoutScreen: React.FC = () => {
-  const router = useRouter();
-  const { workoutId } = useLocalSearchParams<{ workoutId: string }>();
-  const [workout, setWorkout] = useState<Workout | null>(null);
-  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
-  const [currentSetNumber, setCurrentSetNumber] = useState<number>(1);
-  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([]);
-  const [isResting, setIsResting] = useState<boolean>(false);
-  const [restTimeLeft, setRestTimeLeft] = useState<number>(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [actualReps, setActualReps] = useState<string>('');
+export default function StartWorkoutScreen() {
+  const router = useRouter()
+  const { workoutId } = useLocalSearchParams<{ workoutId: string }>()
+  const [workout, setWorkout] = useState<Workout | null>(null)
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0)
+  const [currentSetNumber, setCurrentSetNumber] = useState<number>(1)
+  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>([])
+  const [isResting, setIsResting] = useState<boolean>(false)
+  const [restTimeLeft, setRestTimeLeft] = useState<number>(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [actualReps, setActualReps] = useState<string>('')
+  const pendingActionRef = useRef<'SAME_EXERCISE' | 'NEXT_EXERCISE' | null>(null)
 
   useEffect(() => {
-    loadWorkout();
+    loadWorkout()
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
 
   const loadWorkout = async () => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      const foundWorkout = parsedWorkouts.find((w) => w.id === workoutId);
+      const storedWorkouts = await AsyncStorage.getItem('workouts')
+      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : []
+      const foundWorkout = parsedWorkouts.find((w) => w.id === workoutId)
       if (foundWorkout) {
-        setWorkout(foundWorkout);
+        setWorkout(foundWorkout)
       } else {
-        Alert.alert('Workout not found');
-        router.back();
+        Alert.alert('Workout not found')
+        router.back()
       }
-    } catch (error) {
-      console.error('Failed to load workout', error);
-    }
-  };
-
-  const startRestTimer = (restTime: number) => {
-    setIsResting(true);
-    setRestTimeLeft(restTime);
-    timerRef.current = setInterval(() => {
-      setRestTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(timerRef.current!);
-          setIsResting(false);
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
+    } catch (error) {}
+  }
 
   const handleCompleteSet = () => {
-    const currentExercise = workout!.exercises[currentExerciseIndex];
-    const reps = parseInt(actualReps) || currentExercise.reps;
-
-    setExerciseLogs((prevLogs) => {
-      const existingLog = prevLogs.find((log) => log.exerciseId === currentExercise.id);
+    Keyboard.dismiss()
+    if (!workout) return
+    const currentExercise = workout.exercises[currentExerciseIndex]
+    const reps = parseInt(actualReps) || currentExercise.reps
+    setExerciseLogs((prev) => {
+      const existingLog = prev.find((log) => log.exerciseId === currentExercise.id)
       if (existingLog) {
-        existingLog.sets.push({ setNumber: currentSetNumber, actualReps: reps });
-        return [...prevLogs];
+        existingLog.sets.push({ setNumber: currentSetNumber, actualReps: reps })
+        return [...prev]
       } else {
         const newLog: ExerciseLog = {
           exerciseId: currentExercise.id,
           exerciseName: currentExercise.name,
           sets: [{ setNumber: currentSetNumber, actualReps: reps }],
-        };
-        return [...prevLogs, newLog];
+        }
+        return [...prev, newLog]
       }
-    });
-
-    setActualReps('');
-    if (currentSetNumber < currentExercise.sets) {
-      startRestTimer(currentExercise.rest);
-      setCurrentSetNumber(currentSetNumber + 1);
+    })
+    setActualReps('')
+    const doneWithSets = currentSetNumber >= currentExercise.sets
+    const isLastExercise = currentExerciseIndex >= workout.exercises.length - 1
+    if (!doneWithSets) {
+      pendingActionRef.current = 'SAME_EXERCISE'
+      startRestTimer(currentExercise.rest)
+    } else if (!isLastExercise) {
+      pendingActionRef.current = 'NEXT_EXERCISE'
+      startRestTimer(currentExercise.rest)
     } else {
-      if (currentExerciseIndex < workout!.exercises.length - 1) {
-        startRestTimer(currentExercise.rest);
-        setCurrentExerciseIndex(currentExerciseIndex + 1);
-        setCurrentSetNumber(1);
-      } else {
-        saveWorkoutLog();
-      }
+      saveWorkoutLog()
     }
-  };
-
-  const saveWorkoutLog = async () => {
-    const workoutLog: WorkoutLog = {
-      workoutId: workout!.id,
-      workoutName: workout!.name,
-      date: new Date().toISOString(),
-      exercises: exerciseLogs,
-    };
-
-    try {
-      const existingLogs = await AsyncStorage.getItem('workoutLogs');
-      let logs = existingLogs ? JSON.parse(existingLogs) : [];
-      logs.push(workoutLog);
-      await AsyncStorage.setItem('workoutLogs', JSON.stringify(logs));
-      Alert.alert('Workout completed!', 'Your workout has been logged.');
-      router.replace('/'); 
-    } catch (error) {
-      console.error('Failed to save workout log', error);
-    }
-  };
-
-  if (!workout) {
-    return null;
   }
 
-  const currentExercise = workout.exercises[currentExerciseIndex];
+  const startRestTimer = (restTime: number) => {
+    setIsResting(true)
+    setRestTimeLeft(restTime)
+    timerRef.current = setInterval(() => {
+      setRestTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timerRef.current!)
+          setIsResting(false)
+          setRestTimeLeft(0)
+          handleRestComplete()
+          return 0
+        }
+        return prevTime - 1
+      })
+    }, 1000)
+  }
 
+  const skipRest = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    setIsResting(false)
+    setRestTimeLeft(0)
+    handleRestComplete()
+  }
+
+  const handleRestComplete = () => {
+    if (!workout) return
+    if (pendingActionRef.current === 'SAME_EXERCISE') {
+      setCurrentSetNumber((prev) => prev + 1)
+    } else {
+      setCurrentExerciseIndex((prev) => prev + 1)
+      setCurrentSetNumber(1)
+    }
+    pendingActionRef.current = null
+  }
+
+  const saveWorkoutLog = async () => {
+    if (!workout) return
+    const workoutLog: WorkoutLog = {
+      workoutId: workout.id,
+      workoutName: workout.name,
+      date: new Date().toISOString(),
+      exercises: exerciseLogs,
+    }
+    try {
+      const existingLogs = await AsyncStorage.getItem('workoutLogs')
+      const logs = existingLogs ? JSON.parse(existingLogs) : []
+      logs.push(workoutLog)
+      await AsyncStorage.setItem('workoutLogs', JSON.stringify(logs))
+      Alert.alert('Workout completed', 'Your workout has been logged.')
+      router.push('/DashboardScreen')
+    } catch (error) {}
+  }
+
+  if (!workout) return null
+  const currentExercise = workout.exercises[currentExerciseIndex]
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.container}>
@@ -165,18 +178,18 @@ const StartWorkoutScreen: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{workout.name}</Text>
         </View>
-
         <View style={styles.exerciseContainer}>
           <Text style={styles.exerciseName}>{currentExercise.name}</Text>
           <Text style={styles.setsRepsText}>
             Set {currentSetNumber} of {currentExercise.sets}
           </Text>
-          <Text style={styles.setsRepsText}>
-            Target Reps: {currentExercise.reps}
-          </Text>
+          <Text style={styles.setsRepsText}>Target Reps: {currentExercise.reps}</Text>
           {isResting ? (
             <View style={styles.restContainer}>
               <Text style={styles.restText}>Rest Time: {restTimeLeft} seconds</Text>
+              <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
+                <Text style={styles.skipButtonText}>Skip Rest</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.inputContainer}>
@@ -188,11 +201,10 @@ const StartWorkoutScreen: React.FC = () => {
                 onChangeText={setActualReps}
                 placeholder="Enter reps completed"
                 placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
-              <TouchableOpacity
-                style={styles.completeSetButton}
-                onPress={handleCompleteSet}
-              >
+              <TouchableOpacity style={styles.completeSetButton} onPress={handleCompleteSet}>
                 <Text style={styles.completeSetButtonText}>Complete Set</Text>
               </TouchableOpacity>
             </View>
@@ -200,8 +212,8 @@ const StartWorkoutScreen: React.FC = () => {
         </View>
       </SafeAreaView>
     </LinearGradient>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   gradientBackground: {
@@ -251,6 +263,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#FF5F6D',
     fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  skipButton: {
+    backgroundColor: '#FF5F6D',
+    padding: 12,
+    borderRadius: 8,
+  },
+  skipButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   inputContainer: {
     marginTop: 30,
@@ -280,6 +303,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-});
-
-export default StartWorkoutScreen;
+})

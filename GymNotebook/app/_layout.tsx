@@ -1,16 +1,22 @@
 import { Stack } from 'expo-router';
-import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native';
 
-const Layout = () => {
+export default function Layout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="OpeningScreen" options={{ title: 'Welcome', headerShown: false }} />
-      <Stack.Screen name="SignUpScreen" options={{ title: 'Sign Up', headerShown: true }} />
-      <Stack.Screen name="SignInScreen" options={{ title: 'Sign In', headerShown: true }} />
-      <Stack.Screen name="DashboardScreen" options={{ title: 'DashboardScreen', headerShown: false }} /> {/* Updated route name */}
-    </Stack>
+    <GestureHandlerRootView style={styles.container}>
+      <Stack>
+        <Stack.Screen name="DashboardScreen" options={{ title: 'Dashboard' }} />
+        <Stack.Screen name="WorkoutSelectionScreen" options={{ title: 'Workouts' }} />
+        <Stack.Screen name="PoseEstimatorScreen" options={{ title: 'Posture' }} />
+        <Stack.Screen name="ExerciseLibraryScreen" options={{ title: 'Library' }} />
+      </Stack>
+    </GestureHandlerRootView>
   );
-};
+}
 
-export default Layout;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
