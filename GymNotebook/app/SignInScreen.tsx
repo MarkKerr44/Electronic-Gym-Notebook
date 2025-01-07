@@ -21,11 +21,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const SignInScreen: React.FC = () => {
-  // States to hold the input values
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // States for error messages
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [firebaseError, setFirebaseError] = useState('');
@@ -34,12 +32,10 @@ const SignInScreen: React.FC = () => {
 
   const router = useRouter();
 
-  // Animated values for error messages
   const emailErrorAnim = useRef(new Animated.Value(0)).current;
   const passwordErrorAnim = useRef(new Animated.Value(0)).current;
   const firebaseErrorAnim = useRef(new Animated.Value(0)).current;
 
-  // Function to animate error messages
   const animateError = (animation: Animated.Value) => {
     Animated.timing(animation, {
       toValue: 1,
@@ -49,7 +45,6 @@ const SignInScreen: React.FC = () => {
     }).start();
   };
 
-  // Function to reset error animations
   const resetErrorAnimation = (animation: Animated.Value) => {
     animation.setValue(0);
   };
@@ -57,7 +52,6 @@ const SignInScreen: React.FC = () => {
   const validateInputs = () => {
     let valid = true;
 
-    // Reset error messages
     setEmailError('');
     setPasswordError('');
     setFirebaseError('');
@@ -65,7 +59,6 @@ const SignInScreen: React.FC = () => {
     resetErrorAnimation(passwordErrorAnim);
     resetErrorAnimation(firebaseErrorAnim);
 
-    // Validate email
     if (!email) {
       setEmailError('Email is required.');
       animateError(emailErrorAnim);
@@ -76,7 +69,6 @@ const SignInScreen: React.FC = () => {
       valid = false;
     }
 
-    // Validate password
     if (!password) {
       setPasswordError('Password is required.');
       animateError(passwordErrorAnim);

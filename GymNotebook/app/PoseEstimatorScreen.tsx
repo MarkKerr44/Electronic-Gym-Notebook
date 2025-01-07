@@ -8,17 +8,20 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView } from 'expo-camera';
 import { Picker } from '@react-native-picker/picker';
 import { MaterialIcons } from '@expo/vector-icons';
+import BottomNavBar from '../components/BottomNavBar';
 
 const PoseEstimatorScreen: React.FC = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [facing, setFacing] = useState<'front' | 'back'>('front');
   const [loadingCamera, setLoadingCamera] = useState(true);
   const [selectedExercise, setSelectedExercise] = useState('squats');
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -79,34 +82,38 @@ const PoseEstimatorScreen: React.FC = () => {
           Select an exercise and track your posture in real time
         </Text>
       </LinearGradient>
-      <View style={styles.container}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Exercise:</Text>
-          <View style={styles.pickerWrapper}>
-            <Picker
-              selectedValue={selectedExercise}
-              onValueChange={(itemValue) => setSelectedExercise(itemValue)}
-              style={styles.picker}
-              dropdownIconColor="#FFFFFF"
-            >
-              <Picker.Item label="Squats" value="squats" />
-              <Picker.Item label="Bench Press" value="bench_press" />
-            </Picker>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.container}>
+          <View style={styles.dropdownContainer}>
+            <Text style={styles.dropdownLabel}>Exercise:</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={selectedExercise}
+                onValueChange={(itemValue) => setSelectedExercise(itemValue)}
+                style={styles.picker}
+                dropdownIconColor="#FFFFFF"
+              >
+                <Picker.Item label="Squats" value="squats" />
+                <Picker.Item label="Bench Press" value="bench_press" />
+              </Picker>
+            </View>
           </View>
+          <View style={styles.cameraContainer}>{renderCameraView()}</View>
         </View>
-        <View style={styles.cameraContainer}>{renderCameraView()}</View>
-      </View>
+      </ScrollView>
+      <BottomNavBar index={index} setIndex={setIndex} />
     </SafeAreaView>
   );
 };
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#333333' },
   headerContainer: { paddingHorizontal: 20, paddingVertical: 40, alignItems: 'center' },
   headerTitle: { fontSize: 32, color: '#FFFFFF', fontWeight: 'bold' },
   headerSubtitle: { fontSize: 18, color: '#FFD700', marginTop: 10 },
+  scrollContainer: { flexGrow: 1, paddingBottom: 80 },
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   dropdownContainer: { marginBottom: 20 },
   dropdownLabel: { fontSize: 18, color: '#FFFFFF', marginBottom: 10, fontWeight: 'bold' },

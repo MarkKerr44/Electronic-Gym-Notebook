@@ -240,22 +240,42 @@
 
 **Total hours for Week 10**:  **10.33 hours**  
 
----
+## Winter Break
+
+**Friday 27th December**
+- Researched how I can eject from expo into an android native environment - 3 hours
+- Deciding which android phone is best to purchase for the project - 2 hours
+
+**Thursday 2nd January**
+- Expo app failed due to the SDK needing upgrading, troublefixing - 4 hours
+- Research into mediapipe wrappers for the project - 2 hours
+- Research into how to properly eject from expo into a native environment - 2 hours
+
+**Friday 3rd January** 
+- Set up android phone, downloaded android studio, set up the environment - 2 hours
+- Further troubleshooting into errors caused by SDK update - 3 hours
+- Attempt made to eject the project, unsuccessful - 2.5 hours
+
+**Saturday 4th January**
+- Unsuccessfully tried to set up the app in an android native environment - 4 hours
+- Decided to fix the SDK errors before trying to eject - 2 hours
+
+**Sunday 5th January**
+- Fixed the SDK errors - 2.5 hours
+- Implemented a functional timer that guides the user through the rest between sets - 35 minutes
+- Added a workout history feature - 2 hours 
+- Users can not hold and drag exercises in the workout in order to change the order the exercises are performed in the exercise - 1.5 hours
+- Old gym equipment page scrapped and replaced with a pose estimation page - 1.5 hours 
+- Some UI issues fixed - 1 hour 
+
+**Monday 6th January** 
+- Weight tracker screen created - 1 hour
+- Created a routine set up screen - 3.5 hours
+- Fixed UI issues and bugs - 2 hours
+- Fixed some issues with the nav bar - 30 minutes
+
+**Tuesday 7th January** 
+- Improvements made to the weight tracker screen - 1.5 hours
+- Fixed animation issue when switching pages - 1 hour
 
 
-## **Total project hours**
-
-- **Week 1:** 17.33 hours  
-- **Week 2:** 15 hours  
-- **Week 3:** 15.5 hours  
-- **Week 4:** 10.25 hours  
-- **Week 5:** 8 hours  
-- **Week 6:** 10 hours  
-- **Week 7:** 8 hours  
-- **Week 8:** 9 hours  
-- **Week 9:** 8 hours  
-- **Week 10:** 10.33 hours  
-
-**Grand Total:**: **111.41 hours** 
-
-111 hours and 24 minutes

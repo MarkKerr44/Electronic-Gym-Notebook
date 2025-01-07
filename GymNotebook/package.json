@@ -21,6 +21,7 @@
     "@react-native-picker/picker": "^2.10.2",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
+    "date-time-picker": "^0.5.3",
     "email-validator": "^2.0.4",
     "expo": "^52.0.23",
     "expo-auth-session": "~6.0.1",
@@ -52,7 +53,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.8.0",
     "react-native-web": "^0.19.13",
-    "victory-native": "^37.1.2"
+    "victory-native": "^37.1.2",
+    "@react-native-community/datetimepicker": "8.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native';
 export default function Layout() {
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Stack>
+      <Stack screenOptions={{ animation: 'none' }}>
         <Stack.Screen name="DashboardScreen" options={{ title: 'Dashboard' }} />
         <Stack.Screen name="WorkoutSelectionScreen" options={{ title: 'Workouts' }} />
         <Stack.Screen name="PoseEstimatorScreen" options={{ title: 'Posture' }} />
