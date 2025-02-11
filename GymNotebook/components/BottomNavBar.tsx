@@ -8,31 +8,31 @@ import {
   Dimensions,
   Easing,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
 interface BottomNavBarProps {
   index: number;
   setIndex: (index: number) => void;
 }
 
-const ACTIVE_COLOR = '#2196F3'; 
+const ACTIVE_COLOR = '#2196F3';
 
 const tabs = [
-  { key: 'home', title: 'Home', icon: 'home', route: '/DashboardScreen' },
-  { key: 'workout', title: 'Workout', icon: 'fitness-center', route: '/WorkoutSelectionScreen' },
+  { key: 'home', title: 'Home', icon: 'home', route: 'DashboardScreen' },
+  { key: 'workout', title: 'Workout', icon: 'fitness-center', route: 'WorkoutSelectionScreen' },
   {
     key: 'posture',
     title: 'Posture',
     icon: 'radar',
-    route: '/PoseEstimatorScreen', 
+    route: 'PoseEstimatorScreen',
   },
   {
     key: 'library',
     title: 'Library',
     icon: 'menu-book',
-    route: '/ExerciseLibraryScreen',
+    route: 'ExerciseLibraryScreen',
   },
 ];
 
@@ -41,7 +41,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
   const tabWidth = width / tabs.length;
 
   const translateValue = React.useRef(new Animated.Value(index * tabWidth)).current;
-  const router = useRouter();
+  const navigation = useNavigation();
 
   React.useEffect(() => {
     Animated.timing(translateValue, {
@@ -55,7 +55,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
   const handleTabPress = (tabIndex: number) => {
     if (index === tabIndex) return;
     setIndex(tabIndex);
-    router.push(tabs[tabIndex].route);
+    navigation.navigate(tabs[tabIndex].route);
   };
 
   return (
@@ -95,12 +95,11 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ index, setIndex }) => {
         })}
       </View>
 
-      
       <Animated.View
         style={[
           styles.activeIndicator,
           {
-            width: tabWidth, 
+            width: tabWidth,
             transform: [{ translateX: translateValue }],
           },
         ]}
