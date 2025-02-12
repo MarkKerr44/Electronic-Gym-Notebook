@@ -26,34 +26,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'yarn'
+
+      - name: Cache Node Modules
+        uses: actions/cache@v4
+        with:
+          path: GymNotebook/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('GymNotebook/yarn.lock') }}
+          restore-keys: node-modules-${{ runner.os }}-
+
+      - name: Install dependencies
+        working-directory: GymNotebook
+        run: yarn install --frozen-lockfile
+
+      - name: Verify Dependency Integrity
+        working-directory: GymNotebook
+        run: yarn check --integrity
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('GymNotebook/android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: Cache Node modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: node-modules-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: node-modules-${{ runner.os }}-
-
-      - name: Install dependencies 
-        run: yarn install
-
       - name: Clean Gradle build
-        working-directory: android
+        working-directory: GymNotebook/android
         run: ./gradlew clean
 
       - name: Build Debug APK
-        working-directory: android
+        working-directory: GymNotebook/android
         run: ./gradlew assembleDebug
 
       - name: Archive APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: GymNotebook/android/app/build/outputs/apk/debug/app-debug.apk
