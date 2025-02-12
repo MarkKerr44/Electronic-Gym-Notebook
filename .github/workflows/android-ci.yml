@@ -45,6 +45,10 @@ jobs:
         working-directory: GymNotebook
         run: yarn install
 
+      - name: Make gradlew executable
+        working-directory: GymNotebook/android
+        run: chmod +x gradlew
+
       - name: Clean Gradle build
         working-directory: GymNotebook/android
         run: ./gradlew clean
