@@ -24,7 +24,7 @@ const Stack = createNativeStackNavigator();
 
 function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }} testID="gesture-handler-root-view">
+    <GestureHandlerRootView style={{ flex: 1 }} testID="app-root">
       <NavigationContainer>
         <Stack.Navigator initialRouteName="OpeningScreen">
           <Stack.Screen name="OpeningScreen" component={OpeningScreen} options={{ headerShown: false }} />
