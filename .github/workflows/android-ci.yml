@@ -53,7 +53,7 @@ jobs:
         run: chmod +x gradlew
       
       - name: Install Android CMake
-        run: yes | sdkmanager --install "cmake;3.22.1
+        run: yes | sdkmanager --install "cmake;3.22.1"
 
       - name: Clean Gradle build
         working-directory: GymNotebook/android
