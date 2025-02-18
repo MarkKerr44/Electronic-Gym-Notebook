@@ -640,10 +640,474 @@
           "Resistance_Band_Curl/1.jpg"
         ],
         "id": "Resistance_Band_Curl"
-      }
+      },
+      {
+        "name": "Barbell Row",
+        "force": "pull",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "barbell",
+        "primaryMuscles": ["middle back"],
+        "secondaryMuscles": ["biceps", "lats", "lower back"],
+        "instructions": [
+          "Stand with your feet shoulder-width apart and grip a barbell with an overhand grip, slightly wider than shoulder-width.",
+          "Bend at the hips and slightly at the knees, keeping your back straight.",
+          "Pull the barbell towards your lower chest while keeping your elbows close to your torso.",
+          "Squeeze your back muscles at the top and slowly lower the barbell back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Barbell_Row/0.jpg",
+          "Barbell_Row/1.jpg"
+        ],
+        "id": "Barbell_Row"
+      },
+      {
+        "name": "Deadlift",
+        "force": "pull",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "barbell",
+        "primaryMuscles": ["lower back"],
+        "secondaryMuscles": ["glutes", "hamstrings", "quadriceps", "traps"],
+        "instructions": [
+          "Stand with your feet hip-width apart and grip a barbell with an overhand or mixed grip, just outside your knees.",
+          "Keep your back straight and core engaged as you hinge at the hips and bend your knees slightly.",
+          "Drive through your heels and extend your hips to lift the barbell up to a standing position.",
+          "Squeeze your glutes at the top, then lower the barbell back to the ground in a controlled motion.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Deadlift/0.jpg",
+          "Deadlift/1.jpg"
+        ],
+        "id": "Deadlift"
+      },
+      {
+        "name": "Dumbbell Deadlift",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "dumbbell",
+        "primaryMuscles": ["lower back"],
+        "secondaryMuscles": ["glutes", "hamstrings", "quadriceps", "traps"],
+        "instructions": [
+          "Stand with your feet hip-width apart, holding a dumbbell in each hand in front of your thighs.",
+          "Hinge at your hips and bend your knees slightly as you lower the dumbbells towards the ground.",
+          "Keep your back straight and engage your core throughout the movement.",
+          "Drive through your heels and extend your hips to return to a standing position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Dumbbell_Deadlift/0.jpg",
+          "Dumbbell_Deadlift/1.jpg"
+        ],
+        "id": "Dumbbell_Deadlift"
+      },
+      {
+        "name": "Lat Pulldown",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "cable",
+        "primaryMuscles": ["lats"],
+        "secondaryMuscles": ["biceps", "shoulders"],
+        "instructions": [
+          "Sit down at a lat pulldown machine and grip the bar with a wide overhand grip.",
+          "Lean back slightly and pull the bar down towards your upper chest, squeezing your shoulder blades together.",
+          "Slowly return the bar to the starting position with controlled movement.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Lat_Pulldown/0.jpg",
+          "Lat_Pulldown/1.jpg"
+        ],
+        "id": "Lat_Pulldown"
+      },
+      {
+        "name": "One-Handed Cable Row",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "cable",
+        "primaryMuscles": ["middle back"],
+        "secondaryMuscles": ["biceps", "lats"],
+        "instructions": [
+          "Attach a single handle to the low pulley of a cable machine.",
+          "Sit or stand with your feet shoulder-width apart and grip the handle with one hand.",
+          "Pull the handle towards your torso while keeping your elbow close to your body.",
+          "Squeeze your back muscles at the top, then slowly return to the starting position.",
+          "Repeat for the desired number of repetitions, then switch sides."
+        ],
+        "category": "strength",
+        "images": [
+          "One_Handed_Cable_Row/0.jpg",
+          "One_Handed_Cable_Row/1.jpg"
+        ],
+        "id": "One_Handed_Cable_Row"
+      },
+      {
+        "name": "One-Handed Lat Pulldown",
+        "force": "pull",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "cable",
+        "primaryMuscles": ["lats"],
+        "secondaryMuscles": ["biceps", "shoulders"],
+        "instructions": [
+          "Attach a single handle to the high pulley of a lat pulldown machine.",
+          "Sit down and grip the handle with one hand, palm facing forward.",
+          "Lean back slightly and pull the handle down towards your shoulder, keeping your elbow close to your body.",
+          "Squeeze your lats at the bottom, then slowly return to the starting position.",
+          "Repeat for the desired number of repetitions, then switch sides."
+        ],
+        "category": "strength",
+        "images": [
+          "One_Handed_Lat_Pulldown/0.jpg",
+          "One_Handed_Lat_Pulldown/1.jpg"
+        ],
+        "id": "One_Handed_Lat_Pulldown"
+      },
+      {
+        "name": "Cable Row",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "cable",
+        "primaryMuscles": ["middle back"],
+        "secondaryMuscles": ["biceps", "lats"],
+        "instructions": [
+          "Sit down at a cable row machine with your feet firmly placed on the platform.",
+          "Grab the handle with both hands and keep your back straight.",
+          "Pull the handle towards your torso while keeping your elbows close to your body.",
+          "Squeeze your back muscles at the top, then slowly return to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Cable_Row/0.jpg",
+          "Cable_Row/1.jpg"
+        ],
+        "id": "Cable_Row"
+      },
+      {
+        "name": "Assisted Chin-Up",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "assisted pull-up machine",
+        "primaryMuscles": ["biceps", "lats"],
+        "secondaryMuscles": ["forearms", "middle back"],
+        "instructions": [
+          "Adjust the weight on an assisted pull-up machine to provide assistance.",
+          "Grip the pull-up bar with your palms facing you (underhand grip).",
+          "Step onto the machine platform or band and start in a hanging position.",
+          "Pull yourself up until your chin clears the bar.",
+          "Slowly lower yourself back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Assisted_Chin-Up/0.jpg",
+          "Assisted_Chin-Up/1.jpg"
+        ],
+        "id": "Assisted_Chin-Up"
+      },
+      {
+        "name": "Assisted Pull-Up",
+        "force": "pull",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "assisted pull-up machine",
+        "primaryMuscles": ["lats"],
+        "secondaryMuscles": ["biceps", "forearms", "middle back"],
+        "instructions": [
+          "Adjust the weight on an assisted pull-up machine to provide assistance.",
+          "Grip the pull-up bar with an overhand grip, slightly wider than shoulder-width.",
+          "Step onto the machine platform or band and start in a hanging position.",
+          "Pull yourself up until your chin clears the bar.",
+          "Slowly lower yourself back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Assisted_Pull-Up/0.jpg",
+          "Assisted_Pull-Up/1.jpg"
+        ],
+        "id": "Assisted_Pull-Up"
+      },
+      {
+        "name": "T-Bar Row",
+        "force": "pull",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "barbell",
+        "primaryMuscles": ["middle back"],
+        "secondaryMuscles": ["biceps", "lats", "lower back"],
+        "instructions": [
+          "Load a barbell into a T-bar row station or secure one end in a landmine attachment.",
+          "Straddle the bar and grip the handles with both hands.",
+          "Bend at the hips and slightly at the knees while keeping your back straight.",
+          "Pull the bar towards your torso by retracting your shoulder blades.",
+          "Slowly lower the bar back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "T-Bar_Row/0.jpg",
+          "T-Bar_Row/1.jpg"
+        ],
+        "id": "T-Bar_Row"
+      },
+
     
-      
-      
+      {
+        "name": "Bench Dip",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "body only",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": ["shoulders", "chest"],
+        "instructions": [
+          "Sit on the edge of a bench and place your hands next to your hips.",
+          "Extend your legs straight out in front of you or keep your knees bent for assistance.",
+          "Lower your body by bending your elbows until your upper arms are parallel to the ground.",
+          "Push yourself back up to the starting position by extending your elbows.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Bench_Dip/0.jpg",
+          "Bench_Dip/1.jpg"
+        ],
+        "id": "Bench_Dip"
+      },
+      {
+        "name": "Skull Crushers (Dumbbells)",
+        "force": "push",
+        "level": "intermediate",
+        "mechanic": "isolation",
+        "equipment": "dumbbell",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": [],
+        "instructions": [
+          "Lie on a flat bench holding a dumbbell in each hand with arms fully extended above your chest.",
+          "Lower the dumbbells towards your forehead by bending your elbows.",
+          "Keep your upper arms stationary while lowering the weight.",
+          "Extend your arms back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Skull_Crushers_Dumbbells/0.jpg",
+          "Skull_Crushers_Dumbbells/1.jpg"
+        ],
+        "id": "Skull_Crushers_Dumbbells"
+      },
+      {
+        "name": "Skull Crushers (Barbell)",
+        "force": "push",
+        "level": "intermediate",
+        "mechanic": "isolation",
+        "equipment": "barbell",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": [],
+        "instructions": [
+          "Lie on a flat bench holding a barbell with a narrow grip and arms fully extended above your chest.",
+          "Lower the bar towards your forehead by bending your elbows.",
+          "Keep your upper arms stationary while lowering the weight.",
+          "Extend your arms back to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Skull_Crushers_Barbell/0.jpg",
+          "Skull_Crushers_Barbell/1.jpg"
+        ],
+        "id": "Skull_Crushers_Barbell"
+      },
+      {
+        "name": "Tricep Pushdown (Bar)",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "isolation",
+        "equipment": "cable",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": [],
+        "instructions": [
+          "Attach a straight bar to the high pulley of a cable machine.",
+          "Grip the bar with an overhand grip and stand with a slight forward lean.",
+          "Push the bar down until your arms are fully extended.",
+          "Slowly return the bar to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Tricep_Pushdown_Bar/0.jpg",
+          "Tricep_Pushdown_Bar/1.jpg"
+        ],
+        "id": "Tricep_Pushdown_Bar"
+      },
+      {
+        "name": "Tricep Pushdown (Rope)",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "isolation",
+        "equipment": "cable",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": [],
+        "instructions": [
+          "Attach a rope handle to the high pulley of a cable machine.",
+          "Grip the rope with a neutral grip (palms facing each other) and stand with a slight forward lean.",
+          "Push the rope down until your arms are fully extended, spreading the rope ends apart at the bottom.",
+          "Slowly return to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Tricep_Pushdown_Rope/0.jpg",
+          "Tricep_Pushdown_Rope/1.jpg"
+        ],
+        "id": "Tricep_Pushdown_Rope"
+      },
+      {
+        "name": "Overhead Cable Tricep Extension",
+        "force": "push",
+        "level": "intermediate",
+        "mechanic": "isolation",
+        "equipment": "cable",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": [],
+        "instructions": [
+          "Attach a rope handle to the high pulley of a cable machine.",
+          "Turn away from the machine and grip the rope with both hands, palms facing inward.",
+          "Step forward and lean slightly forward while keeping your elbows close to your head.",
+          "Extend your arms fully overhead by straightening your elbows.",
+          "Slowly return to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Overhead_Cable_Tricep_Extension/0.jpg",
+          "Overhead_Cable_Tricep_Extension/1.jpg"
+        ],
+        "id": "Overhead_Cable_Tricep_Extension"
+      },
+      {
+        "name": "Tricep Bodyweight Extension",
+        "force": "push",
+        "level": "intermediate",
+        "mechanic": "isolation",
+        "equipment": "body only",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": ["shoulders"],
+        "instructions": [
+          "Start in a high plank position with your hands shoulder-width apart.",
+          "Lower your forearms down to the ground while keeping your elbows tucked in.",
+          "Push back up using your triceps until your arms are fully extended.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Tricep_Bodyweight_Extension/0.jpg",
+          "Tricep_Bodyweight_Extension/1.jpg"
+        ],
+        "id": "Tricep_Bodyweight_Extension"
+      },
+      {
+        "name": "Close-Grip Push-Up",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "body only",
+        "primaryMuscles": ["triceps"],
+        "secondaryMuscles": ["chest", "shoulders"],
+        "instructions": [
+          "Start in a push-up position with your hands directly under your shoulders or slightly closer.",
+          "Lower your body while keeping your elbows close to your torso.",
+          "Push yourself back up to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Close-Grip_Push-Up/0.jpg",
+          "Close-Grip_Push-Up/1.jpg"
+        ],
+        "id": "Close-Grip_Push-Up"
+      },
+      {
+        "name": "Bodyweight Squat",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "body only",
+        "primaryMuscles": ["quadriceps"],
+        "secondaryMuscles": ["glutes", "hamstrings"],
+        "instructions": [
+          "Stand with your feet shoulder-width apart and your toes slightly turned outward.",
+          "Lower your hips back and down as if sitting into a chair.",
+          "Keep your chest up and knees in line with your toes.",
+          "Descend until your thighs are parallel to the ground or lower if mobility allows.",
+          "Push through your heels to return to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Bodyweight_Squat/0.jpg",
+          "Bodyweight_Squat/1.jpg"
+        ],
+        "id": "Bodyweight_Squat"
+      },
+      {
+        "name": "Goblet Squat",
+        "force": "push",
+        "level": "beginner",
+        "mechanic": "compound",
+        "equipment": "dumbbell",
+        "primaryMuscles": ["quadriceps"],
+        "secondaryMuscles": ["glutes", "core"],
+        "instructions": [
+          "Hold a dumbbell close to your chest with both hands.",
+          "Stand with your feet shoulder-width apart and your toes slightly turned outward.",
+          "Lower your hips back and down while keeping the dumbbell close to your body.",
+          "Descend until your thighs are parallel to the ground or lower.",
+          "Push through your heels to return to the starting position.",
+          "Repeat for the desired number of repetitions."
+        ],
+        "category": "strength",
+        "images": [
+          "Goblet_Squat/0.jpg",
+          "Goblet_Squat/1.jpg"
+        ],
+        "id": "Goblet_Squat"
+      },
+      {
+        "name": "Bulgarian Split Squat",
+        "force": "push",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "dumbbell",
+        "primaryMuscles": ["quadriceps"],
+        "secondaryMuscles": ["glutes", "hamstrings"],
+        "instructions": [
+          "Stand a few feet in front of a bench and place one foot behind you on the bench.",
+          "Hold a dumbbell in each hand at your sides.",
+          "Lower your body by bending your front knee until your back knee nearly touches the ground.",
+          "Push through your front heel to return to the starting position.",
+          "Repeat for the desired number of repetitions, then switch legs."
+        ],
+        "category": "strength",
+        "images": [
+          "Bulgarian_Split_Squat/0.jpg",
+          "Bulgarian_Split_Squat/1.jpg"
+        ],
+        "id": "Bulgarian_Split_Squat"
+      }
 ]
 
   
