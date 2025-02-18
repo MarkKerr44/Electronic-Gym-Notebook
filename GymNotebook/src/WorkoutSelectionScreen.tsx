@@ -1,5 +1,5 @@
 // WorkoutSelectionScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,15 @@ import {
   SafeAreaView,
   ScrollView,
   Animated,
-  Easing,
-  RefreshControl,
+  Easing
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import BottomNavBar from '../components/BottomNavBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import BottomNavBar from '../components/BottomNavBar';
+// 1) Import your theme context & helpers
+import { ThemeContext } from '../context/ThemeProvider';
+import { getThemeColors } from '../context/themeHelpers';
 
 interface PremadeWorkout {
   id: string;
@@ -52,9 +54,21 @@ const premadeWorkouts: PremadeWorkout[] = [
 
 const WorkoutSelectionScreen: React.FC = () => {
   const [index, setIndex] = useState(1);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const translateAnim = React.useRef(new Animated.Value(100)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(100)).current;
   const navigation = useNavigation();
+
+  // 2) Access the current theme and color set
+  const { theme } = useContext(ThemeContext);
+  const {
+    gradient,
+    textColor,
+    headerGradient,
+    buttonGradient,
+    cardBackground,
+    secondaryTextColor,
+    highlightSolid,
+  } = getThemeColors(theme);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -83,51 +97,60 @@ const WorkoutSelectionScreen: React.FC = () => {
     navigation.navigate('WorkoutHistoryScreen');
   };
 
-  const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {};
+  const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {
+    // Action when user selects a premade workout
+  };
 
   const renderPremadeWorkoutItem = ({ item }: { item: PremadeWorkout }) => (
     <TouchableOpacity
-      style={styles.premadeWorkoutItem}
+      style={[styles.premadeWorkoutItem, { backgroundColor: cardBackground }]}
       onPress={() => handleSelectPremadeWorkout(item)}
     >
       <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateAnim }] }}>
         <Image source={{ uri: item.image }} style={styles.premadeWorkoutImage} />
         <View style={styles.premadeWorkoutInfo}>
-          <Text style={styles.premadeWorkoutName}>{item.name}</Text>
-          <Text style={styles.premadeWorkoutDescription}>{item.description}</Text>
+          <Text style={[styles.premadeWorkoutName, { color: textColor }]}>{item.name}</Text>
+          <Text style={[styles.premadeWorkoutDescription, { color: secondaryTextColor }]}>
+            {item.description}
+          </Text>
         </View>
       </Animated.View>
     </TouchableOpacity>
   );
 
   return (
-    <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
-      <SafeAreaView style={styles.safeArea}>
+    <LinearGradient colors={gradient} style={styles.gradientBackground}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: 'transparent' }]}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <LinearGradient colors={['#0f0c29', '#302b63']} style={styles.headerContainer}>
+          <LinearGradient colors={headerGradient} style={styles.headerContainer}>
             <Animated.View style={{ opacity: fadeAnim }}>
-              <Text style={styles.headerTitle}>Workout Selection</Text>
-              <Text style={styles.headerSubtitle}>Create new workouts or choose premade ones</Text>
+              <Text style={[styles.headerTitle, { color: textColor }]}>Workout Selection</Text>
+              <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>
+                Create new workouts or choose premade ones
+              </Text>
             </Animated.View>
           </LinearGradient>
+
           <Animated.View style={{ transform: [{ translateY: translateAnim }] }}>
             <TouchableOpacity style={styles.createWorkoutButton} onPress={handleCreateNewWorkout}>
-              <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.createWorkoutButtonGradient}>
+              <LinearGradient colors={buttonGradient} style={styles.createWorkoutButtonGradient}>
                 <MaterialIcons name="fitness-center" size={32} color="#FFFFFF" style={styles.buttonIcon} />
                 <Text style={styles.createWorkoutButtonText}>Create New Workout</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
+
           <Animated.View style={{ transform: [{ translateY: translateAnim }] }}>
             <TouchableOpacity style={styles.myWorkoutsButton} onPress={handleMyWorkouts}>
-              <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.myWorkoutsButtonGradient}>
+              <LinearGradient colors={buttonGradient} style={styles.myWorkoutsButtonGradient}>
                 <MaterialIcons name="list" size={32} color="#FFFFFF" style={styles.buttonIcon} />
                 <Text style={styles.myWorkoutsButtonText}>My Workouts</Text>
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
+
           <Animated.View style={{ opacity: fadeAnim }}>
-            <Text style={styles.sectionTitle}>Premade Workouts</Text>
+            <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>Premade Workouts</Text>
             <FlatList
               data={premadeWorkouts}
               renderItem={renderPremadeWorkoutItem}
@@ -137,8 +160,12 @@ const WorkoutSelectionScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
             />
           </Animated.View>
-          <TouchableOpacity style={styles.historyButton} onPress={handleViewWorkoutHistory}>
-            <Text style={styles.historyButtonText}>View Workout History</Text>
+
+          <TouchableOpacity
+            style={[styles.historyButton, { backgroundColor: highlightSolid }]}
+            onPress={handleViewWorkoutHistory}
+          >
+            <Text style={[styles.historyButtonText, { color: textColor }]}>View Workout History</Text>
           </TouchableOpacity>
         </ScrollView>
         <BottomNavBar index={index} setIndex={setIndex} />
@@ -153,7 +180,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#333333',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -168,13 +194,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 32,
-    color: '#FFFFFF',
     fontWeight: 'bold',
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 18,
-    color: '#FFD700',
     marginTop: 10,
     textAlign: 'center',
   },
@@ -217,7 +241,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    color: '#FFC371',
     fontWeight: 'bold',
     marginLeft: 20,
     marginBottom: 10,
@@ -227,7 +250,6 @@ const styles = StyleSheet.create({
   },
   premadeWorkoutItem: {
     flexDirection: 'column',
-    backgroundColor: '#4C4C4C',
     borderRadius: 16,
     padding: 10,
     marginRight: 15,
@@ -248,26 +270,22 @@ const styles = StyleSheet.create({
   },
   premadeWorkoutName: {
     fontSize: 20,
-    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   premadeWorkoutDescription: {
     fontSize: 14,
-    color: '#CCCCCC',
     marginTop: 5,
   },
   historyButton: {
     marginHorizontal: 20,
     marginTop: 30,
     marginBottom: 60,
-    backgroundColor: '#FFC371',
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: 'center',
   },
   historyButtonText: {
     fontSize: 18,
-    color: '#302b63',
     fontWeight: 'bold',
   },
 });
