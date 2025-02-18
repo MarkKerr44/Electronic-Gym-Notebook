@@ -30,7 +30,10 @@ function App() {
     <GestureHandlerRootView style={{ flex: 1 }} testID="app-root">
       <ThemeProvider>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="OpeningScreen">
+          <Stack.Navigator
+            initialRouteName="OpeningScreen"
+            screenOptions={{ animation: 'none' }}
+          >
             <Stack.Screen
               name="OpeningScreen"
               component={OpeningScreen}
