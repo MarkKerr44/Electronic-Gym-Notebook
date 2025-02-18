@@ -41,6 +41,9 @@ jobs:
           key: node-modules-${{ runner.os }}-${{ hashFiles('GymNotebook/yarn.lock') }}
           restore-keys: node-modules-${{ runner.os }}-
 
+      - name: Install apt deps (ninja & cmake)
+        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake
+
       - name: Install dependencies 
         working-directory: GymNotebook
         run: yarn install
@@ -63,7 +66,6 @@ jobs:
           name: app-debug-apk
           path: GymNotebook/android/app/build/outputs/apk/debug/app-debug.apk
 
-      # Testing
       - name: Run tests
         working-directory: GymNotebook
         run: yarn test --coverage
