@@ -1,5 +1,5 @@
 // DashboardScreen.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,15 +14,20 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
-import BottomNavBar from '../components/BottomNavBar';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import BottomNavBar from '../components/BottomNavBar';
 import NotificationPanel from '../components/NotificationPanel';
+import { ThemeContext } from '../context/ThemeProvider';
+import { getThemeColors } from '../context/themeHelpers';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function DashboardScreen() {
   const navigation = useNavigation();
+  const { theme } = useContext(ThemeContext);
+  const { gradient, textColor, boxBackground, accent } = getThemeColors(theme);
+
   const [index, setIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [notifications, setNotifications] = useState([]);
@@ -99,14 +104,14 @@ function DashboardScreen() {
   }
 
   return (
-    <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
+    <LinearGradient colors={gradient} style={styles.gradientBackground}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
             <View style={styles.topBar}>
               <View style={styles.iconContainer}>
                 <TouchableOpacity style={styles.iconButton} onPress={handleNotificationPress}>
-                  <MaterialIcons name="notifications" size={28} color="#ffffff" />
+                  <MaterialIcons name="notifications" size={28} color={textColor} />
                   {unreadCount > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -117,51 +122,55 @@ function DashboardScreen() {
                   style={styles.iconButton}
                   onPress={() => navigation.navigate('UserProfileScreen')}
                 >
-                  <MaterialIcons name="account-circle" size={28} color="#ffffff" />
+                  <MaterialIcons name="account-circle" size={28} color={textColor} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.iconButton}
                   onPress={() => navigation.navigate('SettingsScreen')}
                 >
-                  <MaterialIcons name="settings" size={28} color="#ffffff" />
+                  <MaterialIcons name="settings" size={28} color={textColor} />
                 </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.calendarContainer}>
-              <Text style={styles.calendarTitle}>Your Routine This Week</Text>
+            <View style={[styles.calendarContainer, { backgroundColor: boxBackground }]}>
+              <Text style={[styles.calendarTitle, { color: textColor }]}>Your Routine This Week</Text>
               <View style={styles.dayRow}>
                 {DAYS.map((day, i) => (
                   <View key={day} style={styles.dayCard}>
-                    <Text style={styles.dayName}>{day}</Text>
-                    <Text style={styles.dayWorkout}>{renderRoutineDay(i)}</Text>
+                    <Text style={[styles.dayName, { color: textColor }]}>{day}</Text>
+                    <Text style={[styles.dayWorkout, { color: textColor }]}>
+                      {renderRoutineDay(i)}
+                    </Text>
                   </View>
                 ))}
               </View>
               <TouchableOpacity
-                style={styles.setRoutineButton}
+                style={[styles.setRoutineButton, { backgroundColor: accent }]}
                 onPress={() => navigation.navigate('RoutineSetupScreen')}
               >
-                <Text style={styles.setRoutineButtonText}>Set Routine</Text>
+                <Text style={[styles.setRoutineButtonText, { color: '#ffffff' }]}>Set Routine</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.upcomingWorkoutContainer}>
-              <Text style={styles.upcomingTitle}>Next Workout</Text>
-              <Text style={styles.upcomingWorkoutText}>{nextWorkout}</Text>
+            <View style={[styles.upcomingWorkoutContainer, { backgroundColor: boxBackground }]}>
+              <Text style={[styles.upcomingTitle, { color: textColor }]}>Next Workout</Text>
+              <Text style={[styles.upcomingWorkoutText, { color: textColor }]}>{nextWorkout}</Text>
               <TouchableOpacity
-                style={styles.startButton}
+                style={[styles.startButton, { backgroundColor: accent }]}
                 onPress={() => {
                   if (nextWorkout === 'No upcoming workout set') return;
                   navigation.navigate('WorkoutDetailScreen');
                 }}
               >
-                <Text style={styles.startButtonText}>View Workout</Text>
+                <Text style={[styles.startButtonText, { color: '#ffffff' }]}>View Workout</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
-              style={styles.weightTrackerButton}
+              style={[styles.weightTrackerButton, { backgroundColor: accent }]}
               onPress={() => navigation.navigate('WeightTrackerScreen')}
             >
-              <Text style={styles.weightTrackerButtonText}>Go to Weight Tracker</Text>
+              <Text style={[styles.weightTrackerButtonText, { color: '#ffffff' }]}>
+                Go to Weight Tracker
+              </Text>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
@@ -174,16 +183,20 @@ function DashboardScreen() {
         </Modal>
         <Modal visible={showOnboarding} transparent animationType="slide">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalText}>
+            <View style={[styles.modalContainer, { backgroundColor: '#333333' }]}>
+              <Text style={[styles.modalText, { color: '#ffffff' }]}>
                 It's your first time here! Would you like to enter your info? (recommended)
               </Text>
               <View style={styles.modalButtonRow}>
-                <TouchableOpacity style={styles.modalButton} onPress={() => handleOnboardingChoice(true)}>
-                  <Text style={styles.modalButtonText}>Yes</Text>
+                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]}
+                  onPress={() => handleOnboardingChoice(true)}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>Yes</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.modalButton} onPress={() => handleOnboardingChoice(false)}>
-                  <Text style={styles.modalButtonText}>No</Text>
+                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]}
+                  onPress={() => handleOnboardingChoice(false)}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>No</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -216,51 +229,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
-  calendarContainer: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 15, marginTop: 20 },
-  calendarTitle: { fontSize: 18, color: '#ffffff', fontWeight: 'bold', marginBottom: 10 },
+  calendarContainer: { borderRadius: 12, padding: 15, marginTop: 20 },
+  calendarTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   dayRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  dayCard: {
-    width: 45,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  dayName: { fontSize: 14, color: '#fff', fontWeight: 'bold' },
-  dayWorkout: { fontSize: 12, color: '#fff', marginTop: 4, textAlign: 'center' },
-  setRoutineButton: {
-    backgroundColor: '#FF5F6D',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    alignSelf: 'center',
-  },
-  setRoutineButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '600' },
-  upcomingWorkoutContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    padding: 20,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  upcomingTitle: { fontSize: 18, color: '#ffffff', fontWeight: 'bold', marginBottom: 10 },
-  upcomingWorkoutText: { fontSize: 16, color: '#ffffff', marginBottom: 20, textAlign: 'center' },
-  startButton: { backgroundColor: '#FF5F6D', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 },
-  startButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '600' },
-  weightTrackerButton: {
-    backgroundColor: '#FF5F6D',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    alignSelf: 'center',
-  },
-  weightTrackerButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '600' },
+  dayCard: { width: 45, alignItems: 'center', marginBottom: 10 },
+  dayName: { fontSize: 14, fontWeight: 'bold' },
+  dayWorkout: { fontSize: 12, marginTop: 4, textAlign: 'center' },
+  setRoutineButton: { borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20, marginTop: 20, alignSelf: 'center' },
+  setRoutineButtonText: { fontSize: 16, fontWeight: '600' },
+  upcomingWorkoutContainer: { borderRadius: 12, padding: 20, marginTop: 20, alignItems: 'center' },
+  upcomingTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  upcomingWorkoutText: { fontSize: 16, marginBottom: 20, textAlign: 'center' },
+  startButton: { borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20 },
+  startButtonText: { fontSize: 16, fontWeight: '600' },
+  weightTrackerButton: { borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20, marginTop: 20, alignSelf: 'center' },
+  weightTrackerButtonText: { fontSize: 16, fontWeight: '600' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { width: '80%', backgroundColor: '#333333', borderRadius: 16, padding: 20 },
-  modalText: { fontSize: 18, color: '#ffffff', marginBottom: 20, textAlign: 'center' },
+  modalContainer: { width: '80%', borderRadius: 16, padding: 20 },
+  modalText: { fontSize: 18, marginBottom: 20, textAlign: 'center' },
   modalButtonRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  modalButton: { backgroundColor: '#FF5F6D', borderRadius: 8, padding: 10, minWidth: 60, alignItems: 'center' },
-  modalButtonText: { color: '#ffffff', fontWeight: 'bold' },
+  modalButton: { borderRadius: 8, padding: 10, minWidth: 60, alignItems: 'center' },
 });
 
 export { DashboardScreen };
