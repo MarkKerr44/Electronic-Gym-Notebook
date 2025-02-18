@@ -41,6 +41,9 @@ jobs:
           key: node-modules-${{ runner.os }}-${{ hashFiles('GymNotebook/yarn.lock') }}
           restore-keys: node-modules-${{ runner.os }}-
 
+      - name: Install apt deps (ninja & cmake)
+        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake
+
       - name: Install dependencies 
         working-directory: GymNotebook
         run: yarn install
@@ -48,6 +51,9 @@ jobs:
       - name: Make gradlew executable
         working-directory: GymNotebook/android
         run: chmod +x gradlew
+      
+      - name: Install Android CMake
+        run: yes | sdkmanager --install "cmake;3.22.1
 
       - name: Clean Gradle build
         working-directory: GymNotebook/android
@@ -62,3 +68,13 @@ jobs:
         with:
           name: app-debug-apk
           path: GymNotebook/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Run tests
+        working-directory: GymNotebook
+        run: yarn test --coverage
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: GymNotebook/coverage
