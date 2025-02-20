@@ -1,4 +1,3 @@
-// SignUpScreen.tsx
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -27,23 +26,18 @@ const SignUpScreen: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
   const [emailError, setEmailError] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [firebaseError, setFirebaseError] = useState('');
-
   const [loading, setLoading] = useState(false);
-
   const navigation = useNavigation();
-
   const emailErrorAnim = useRef(new Animated.Value(0)).current;
   const usernameErrorAnim = useRef(new Animated.Value(0)).current;
   const passwordErrorAnim = useRef(new Animated.Value(0)).current;
   const confirmPasswordErrorAnim = useRef(new Animated.Value(0)).current;
   const firebaseErrorAnim = useRef(new Animated.Value(0)).current;
-
   const animateError = (animation: Animated.Value) => {
     Animated.timing(animation, {
       toValue: 1,
@@ -52,14 +46,11 @@ const SignUpScreen: React.FC = () => {
       useNativeDriver: true,
     }).start();
   };
-
   const resetErrorAnimation = (animation: Animated.Value) => {
     animation.setValue(0);
   };
-
   const validateInputs = () => {
     let valid = true;
-
     setEmailError('');
     setUsernameError('');
     setPasswordError('');
@@ -70,7 +61,6 @@ const SignUpScreen: React.FC = () => {
     resetErrorAnimation(passwordErrorAnim);
     resetErrorAnimation(confirmPasswordErrorAnim);
     resetErrorAnimation(firebaseErrorAnim);
-
     if (!email) {
       setEmailError('Email is required.');
       animateError(emailErrorAnim);
@@ -80,7 +70,6 @@ const SignUpScreen: React.FC = () => {
       animateError(emailErrorAnim);
       valid = false;
     }
-
     if (!username) {
       setUsernameError('Username is required.');
       animateError(usernameErrorAnim);
@@ -90,7 +79,6 @@ const SignUpScreen: React.FC = () => {
       animateError(usernameErrorAnim);
       valid = false;
     }
-
     if (!password) {
       setPasswordError('Password is required.');
       animateError(passwordErrorAnim);
@@ -100,7 +88,6 @@ const SignUpScreen: React.FC = () => {
       animateError(passwordErrorAnim);
       valid = false;
     }
-
     if (!confirmPassword) {
       setConfirmPasswordError('Please confirm your password.');
       animateError(confirmPasswordErrorAnim);
@@ -110,32 +97,24 @@ const SignUpScreen: React.FC = () => {
       animateError(confirmPasswordErrorAnim);
       valid = false;
     }
-
     return valid;
   };
-
   const handleSignUp = async () => {
     if (!validateInputs()) {
       return;
     }
-
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName: username,
         });
       }
-
       setLoading(false);
       navigation.navigate('DashboardScreen');
     } catch (error: any) {
       setLoading(false);
-
-      console.log('Firebase Sign Up Error:', error);
-
       let errorMessage = 'An error occurred. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This email is already in use.';
@@ -152,7 +131,6 @@ const SignUpScreen: React.FC = () => {
       animateError(firebaseErrorAnim);
     }
   };
-
   return (
     <LinearGradient
       colors={['#0f0c29', '#302b63', '#24243e']}
@@ -168,7 +146,6 @@ const SignUpScreen: React.FC = () => {
         >
           <View style={styles.innerContainer}>
             <Text style={styles.title}>Create Account</Text>
-
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
@@ -193,14 +170,11 @@ const SignUpScreen: React.FC = () => {
                 />
               </View>
               {emailError ? (
-                <Animated.Text
-                  style={[styles.errorText, { opacity: emailErrorAnim }]}
-                >
+                <Animated.Text style={[styles.errorText, { opacity: emailErrorAnim }]}>
                   {emailError}
                 </Animated.Text>
               ) : null}
             </View>
-
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Username</Text>
               <View style={styles.inputWrapper}>
@@ -224,14 +198,11 @@ const SignUpScreen: React.FC = () => {
                 />
               </View>
               {usernameError ? (
-                <Animated.Text
-                  style={[styles.errorText, { opacity: usernameErrorAnim }]}
-                >
+                <Animated.Text style={[styles.errorText, { opacity: usernameErrorAnim }]}>
                   {usernameError}
                 </Animated.Text>
               ) : null}
             </View>
-
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrapper}>
@@ -255,14 +226,11 @@ const SignUpScreen: React.FC = () => {
                 />
               </View>
               {passwordError ? (
-                <Animated.Text
-                  style={[styles.errorText, { opacity: passwordErrorAnim }]}
-                >
+                <Animated.Text style={[styles.errorText, { opacity: passwordErrorAnim }]}>
                   {passwordError}
                 </Animated.Text>
               ) : null}
             </View>
-
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Confirm Password</Text>
               <View style={styles.inputWrapper}>
@@ -286,22 +254,16 @@ const SignUpScreen: React.FC = () => {
                 />
               </View>
               {confirmPasswordError ? (
-                <Animated.Text
-                  style={[styles.errorText, { opacity: confirmPasswordErrorAnim }]}
-                >
+                <Animated.Text style={[styles.errorText, { opacity: confirmPasswordErrorAnim }]}>
                   {confirmPasswordError}
                 </Animated.Text>
               ) : null}
             </View>
-
             {firebaseError ? (
-              <Animated.Text
-                style={[styles.firebaseErrorText, { opacity: firebaseErrorAnim }]}
-              >
+              <Animated.Text style={[styles.firebaseErrorText, { opacity: firebaseErrorAnim }]}>
                 {firebaseError}
               </Animated.Text>
             ) : null}
-
             <TouchableOpacity
               onPress={handleSignUp}
               style={styles.buttonWrapper}
@@ -318,6 +280,12 @@ const SignUpScreen: React.FC = () => {
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
+            <View style={styles.logInLinkContainer}>
+              <Text style={styles.logInText}>Already have an account?</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('SignInScreen')}>
+                <Text style={styles.logInLink}> Log in</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -397,6 +365,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ffffff',
     fontWeight: '700',
+  },
+  logInLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  logInText: {
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  logInLink: {
+    fontSize: 16,
+    color: '#FFC371',
+    fontWeight: 'bold',
   },
 });
 
