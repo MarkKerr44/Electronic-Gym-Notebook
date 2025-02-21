@@ -1,11 +1,17 @@
-// CreateWorkoutScreen.tsx
 import React, { useState, useEffect } from 'react';
-import {
+import * as RN from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import exercisesData from '../exercises.json';
+import { Swipeable } from 'react-native-gesture-handler';
+import { useNavigation } from '@react-navigation/native';
+
+const {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   SafeAreaView,
   TextInput,
@@ -13,11 +19,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-} from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import exercisesData from '../exercises.json';
+  ScrollView,
+  Keyboard
+} = RN;
 
 interface Exercise {
   id: string;
@@ -37,462 +41,379 @@ interface SelectedExercise extends Exercise {
 }
 
 const CreateWorkoutScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const [workoutName, setWorkoutName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'exercises' | 'stats'>('exercises');
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>(exercisesData);
-  const [isModalVisible, setModalVisible] = useState<boolean>(false);
   const [selectedExercisesInModal, setSelectedExercisesInModal] = useState<Exercise[]>([]);
-  const [isSaveModalVisible, setSaveModalVisible] = useState<boolean>(false);
-  const [workoutName, setWorkoutName] = useState<string>('');
+  const [tempFilterType, setTempFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
+  const [filterType, setFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
 
   useEffect(() => {
     if (searchTerm === '') {
       setFilteredExercises(exercisesData);
     } else {
-      const filtered = exercisesData.filter((exercise) =>
-        exercise.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = exercisesData.filter((ex) =>
+        ex.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredExercises(filtered);
     }
   }, [searchTerm]);
 
   const addExercisesToWorkout = () => {
-    const newSelectedExercises = selectedExercisesInModal.map((exercise) => ({
-      ...exercise,
+    const newSelected = selectedExercisesInModal.map((ex) => ({
+      ...ex,
       sets: 3,
       reps: 10,
-      rest: 60,
+      rest: 60
     }));
-    setSelectedExercises((prevExercises) => [...prevExercises, ...newSelectedExercises]);
+    setSelectedExercises((prev) => [...prev, ...newSelected]);
     setSelectedExercisesInModal([]);
-    setModalVisible(false);
+    setIsAddModalVisible(false);
   };
 
-  const removeExerciseFromWorkout = (index: number) => {
-    setSelectedExercises((prevExercises) => prevExercises.filter((_, i) => i !== index));
-  };
-
-  const toggleExerciseSelection = (exercise: Exercise) => {
-    const isAlreadySelected = selectedExercisesInModal.find((e) => e.id === exercise.id);
-    if (isAlreadySelected) {
-      setSelectedExercisesInModal((prevSelected) =>
-        prevSelected.filter((e) => e.id !== exercise.id)
-      );
-    } else {
-      setSelectedExercisesInModal((prevSelected) => [...prevSelected, exercise]);
-    }
+  const removeExercise = (index: number) => {
+    setSelectedExercises((prev) => prev.filter((_, i) => i !== index));
   };
 
   const calculateWorkoutStats = () => {
-    const muscleGroups: { [key: string]: { primary: number; secondary: number } } = {};
-
-    selectedExercises.forEach((exercise) => {
-      exercise.primaryMuscles.forEach((muscle) => {
-        if (!muscleGroups[muscle]) muscleGroups[muscle] = { primary: 0, secondary: 0 };
-        muscleGroups[muscle].primary += 1;
+    const stats: { [key: string]: { primary: number; secondary: number; exercises: SelectedExercise[] } } = {};
+    selectedExercises.forEach((ex) => {
+      ex.primaryMuscles.forEach((muscle) => {
+        const cap = muscle.charAt(0).toUpperCase() + muscle.slice(1);
+        if (!stats[cap]) stats[cap] = { primary: 0, secondary: 0, exercises: [] };
+        stats[cap].primary += 1;
+        stats[cap].exercises.push(ex);
       });
-      exercise.secondaryMuscles.forEach((muscle) => {
-        if (!muscleGroups[muscle]) muscleGroups[muscle] = { primary: 0, secondary: 0 };
-        muscleGroups[muscle].secondary += 1;
+      ex.secondaryMuscles.forEach((muscle) => {
+        const cap = muscle.charAt(0).toUpperCase() + muscle.slice(1);
+        if (!stats[cap]) stats[cap] = { primary: 0, secondary: 0, exercises: [] };
+        stats[cap].secondary += 1;
+        stats[cap].exercises.push(ex);
       });
     });
-
-    return muscleGroups;
+    return stats;
   };
 
-  const muscleStats = calculateWorkoutStats();
+  const workoutStats = calculateWorkoutStats();
+
+  const renderSelectedExercise = ({ item, index }: { item: SelectedExercise; index: number }) => (
+    <View style={styles.exerciseCard} key={index}>
+      <View style={styles.exerciseInfo}>
+        <Text style={styles.exerciseName}>{item.name}</Text>
+        <Text style={styles.exerciseDetails}>
+          {item.sets} x {item.reps} | {item.rest}s
+        </Text>
+      </View>
+      <TouchableOpacity onPress={() => removeExercise(index)} style={styles.deleteButton}>
+        <MaterialIcons name="delete" size={24} color="#FF5F6D" />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStatRow = (
+    muscle: string,
+    stat: { primary: number; secondary: number; exercises: SelectedExercise[] }
+  ) => (
+    <TouchableOpacity
+      style={styles.statRow}
+      key={muscle}
+      onPress={() => Alert.alert(muscle, stat.exercises.map(e => e.name).join(', '))}
+    >
+      <Text style={styles.statCell}>{muscle}</Text>
+      <Text style={styles.statCell}>{stat.primary}</Text>
+      <Text style={styles.statCell}>{stat.secondary}</Text>
+    </TouchableOpacity>
+  );
+
+  const SegmentedControl = () => (
+    <View style={styles.segmentedControl}>
+      <TouchableOpacity
+        style={[styles.segmentButton, viewMode === 'exercises' && styles.segmentButtonActive]}
+        onPress={() => setViewMode('exercises')}
+      >
+        <Text style={[styles.segmentText, viewMode === 'exercises' && styles.segmentTextActive]}>Exercises</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.segmentButton, viewMode === 'stats' && styles.segmentButtonActive]}
+        onPress={() => setViewMode('stats')}
+      >
+        <Text style={[styles.segmentText, viewMode === 'stats' && styles.segmentTextActive]}>Stats</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('WorkoutSelectionScreen')}>
+            <MaterialIcons name="arrow-back" size={30} color="#ffffff" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Workout</Text>
+          <View style={{ width: 30 }} />
         </View>
-
-        <TouchableOpacity style={styles.addExerciseButton} onPress={() => setModalVisible(true)}>
-          <LinearGradient
-            colors={['#FF5F6D', '#FFC371']}
-            style={styles.addExerciseButtonGradient}
-          >
-            <MaterialIcons name="add-circle" size={30} color="#fff" />
-            <Text style={styles.addExerciseButtonText}>Add Exercises</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <ScrollView style={styles.selectedExercisesContainer}>
-          <Text style={styles.sectionTitle}>Selected Exercises</Text>
-          {selectedExercises.length === 0 ? (
-            <Text style={styles.emptyText}>No exercises added yet.</Text>
-          ) : (
-            selectedExercises.map((exercise, index) => (
-              <View key={index} style={styles.selectedExerciseCard}>
-                <View style={styles.selectedExerciseInfo}>
-                  <Text style={styles.selectedExerciseName}>{exercise.name}</Text>
-                  <Text style={styles.setsRepsText}>
-                    {exercise.sets} sets x {exercise.reps} reps
-                  </Text>
-                  <Text style={styles.restText}>Rest: {exercise.rest} seconds</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.removeExerciseButton}
-                  onPress={() => removeExerciseFromWorkout(index)}
-                >
-                  <MaterialIcons name="delete" size={24} color="#ff5f6d" />
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
-        </ScrollView>
-
-        <View style={styles.statsContainer}>
-          <Text style={styles.statsTitle}>Workout Stats</Text>
-          <ScrollView style={styles.statsScroll}>
-            {Object.keys(muscleStats).map((muscle, index) => (
-              <View key={index} style={styles.statItem}>
-                <Text style={styles.muscleName}>{muscle}</Text>
-                <Text style={styles.muscleStat}>
-                  Primary: {muscleStats[muscle].primary}, Secondary: {muscleStats[muscle].secondary}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        <TouchableOpacity
-          style={styles.saveWorkoutButton}
-          onPress={() => setSaveModalVisible(true)}
-        >
-          <Text style={styles.saveWorkoutButtonText}>Save Workout</Text>
-        </TouchableOpacity>
-
-        <Modal visible={isModalVisible} transparent={true} animationType="slide">
-          <KeyboardAvoidingView
-            style={styles.modalContainer}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Exercises</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <MaterialIcons name="close" size={24} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.searchContainer}>
-                <MaterialIcons name="search" size={24} color="#999" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search exercises"
-                  placeholderTextColor="#999"
-                  value={searchTerm}
-                  onChangeText={setSearchTerm}
-                />
-              </View>
-
-              <FlatList
-                data={filteredExercises}
-                renderItem={({ item }) => {
-                  const isSelected = selectedExercisesInModal.some((e) => e.id === item.id);
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.exerciseItem,
-                        isSelected && styles.exerciseItemSelected,
-                      ]}
-                      onPress={() => toggleExerciseSelection(item)}
-                    >
-                      <Text style={styles.exerciseName}>{item.name}</Text>
-                      <MaterialIcons
-                        name={isSelected ? 'check-box' : 'check-box-outline-blank'}
-                        size={24}
-                        color={isSelected ? '#FFC371' : '#ffffff'}
-                      />
-                    </TouchableOpacity>
-                  );
-                }}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContainer}
-                style={styles.exerciseList}
-              />
-
-              <TouchableOpacity
-                style={styles.addSelectedExercisesButton}
-                onPress={addExercisesToWorkout}
-              >
-                <Text style={styles.addSelectedExercisesButtonText}>
-                  Add {selectedExercisesInModal.length} Exercises
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
-
-        <Modal visible={isSaveModalVisible} transparent={true} animationType="slide">
-          <KeyboardAvoidingView
-            style={styles.modalContainer}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Save Workout</Text>
-                <TouchableOpacity onPress={() => setSaveModalVisible(false)}>
-                  <MaterialIcons name="close" size={24} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+          <SegmentedControl />
+          {viewMode === 'exercises' && (
+            <View style={styles.exercisesContainer}>
+              <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Workout Name</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.workoutNameInput}
                   value={workoutName}
                   onChangeText={setWorkoutName}
                   placeholder="Enter workout name"
                   placeholderTextColor="#999"
                 />
               </View>
-
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={async () => {
-                  if (workoutName.trim() === '') {
-                    Alert.alert('Please enter a workout name.');
-                    return;
-                  }
-                  const workout = {
-                    id: Date.now().toString(),
-                    name: workoutName,
-                    exercises: selectedExercises,
-                  };
-
-                  try {
-                    const existingWorkouts = await AsyncStorage.getItem('workouts');
-                    let workouts = existingWorkouts ? JSON.parse(existingWorkouts) : [];
-                    workouts.push(workout);
-                    await AsyncStorage.setItem('workouts', JSON.stringify(workouts));
-                    setSelectedExercises([]);
-                    setWorkoutName('');
-                    setSaveModalVisible(false);
-                    Alert.alert('Workout saved successfully!');
-                  } catch (error) {
-                    console.log('Error saving workout:', error);
-                  }
-                }}
-              >
-                <Text style={styles.saveButtonText}>Save Workout</Text>
+              <TouchableOpacity style={styles.addExerciseButton} onPress={() => setIsAddModalVisible(true)}>
+                <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.addExerciseGradient}>
+                  <MaterialIcons name="add-circle" size={30} color="#fff" />
+                  <Text style={styles.addExerciseText}>Add Exercises</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Selected Exercises</Text>
+                {selectedExercises.length === 0 ? (
+                  <Text style={styles.emptyText}>No exercises selected.</Text>
+                ) : (
+                  selectedExercises.map((exercise, index) => renderSelectedExercise({ item: exercise, index }))
+                )}
+              </View>
+            </View>
+          )}
+          {viewMode === 'stats' && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.sectionTitle}>Workout Stats</Text>
+              {Object.keys(workoutStats).length === 0 ? (
+                <Text style={styles.emptyText}>No stats available.</Text>
+              ) : (
+                <View style={styles.statsTable}>
+                  <View style={styles.statHeader}>
+                    <Text style={styles.statHeaderCell}>Muscle</Text>
+                    <Text style={styles.statHeaderCell}>Primary</Text>
+                    <Text style={styles.statHeaderCell}>Secondary</Text>
+                  </View>
+                  {Object.keys(workoutStats).map((muscle) => renderStatRow(muscle, workoutStats[muscle]))}
+                </View>
+              )}
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.saveWorkoutButton}
+            onPress={async () => {
+              if (workoutName.trim() === "") {
+                Alert.alert("Please enter a workout name.");
+                return;
+              }
+              const workout = {
+                id: Date.now().toString(),
+                name: workoutName,
+                exercises: selectedExercises
+              };
+              try {
+                const existingWorkouts = await AsyncStorage.getItem("workouts");
+                let workouts = existingWorkouts ? JSON.parse(existingWorkouts) : [];
+                workouts.push(workout);
+                await AsyncStorage.setItem("workouts", JSON.stringify(workouts));
+                setWorkoutName("");
+                setSelectedExercises([]);
+                Alert.alert("Workout saved successfully!");
+              } catch (error) {
+                console.log("Error saving workout:", error);
+              }
+            }}
+          >
+            <Text style={styles.saveWorkoutButtonText}>Save Workout</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+      <Modal visible={isAddModalVisible} transparent={true} animationType="slide">
+        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Exercises</Text>
+              <TouchableOpacity onPress={() => setIsAddModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#ffffff" />
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
-        </Modal>
-      </SafeAreaView>
+            <View style={styles.searchContainer}>
+              <MaterialIcons name="search" size={24} color="#999" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search exercises"
+                placeholderTextColor="#999"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+              />
+            </View>
+            <FlatList
+              data={filteredExercises}
+              renderItem={({ item }) => {
+                const isSelected = selectedExercisesInModal.some((e) => e.id === item.id);
+                return (
+                  <TouchableOpacity
+                    style={[styles.exerciseItem, isSelected && styles.exerciseItemSelected]}
+                    onPress={() => {
+                      const exists = selectedExercisesInModal.find((e) => e.id === item.id);
+                      if (exists) {
+                        setSelectedExercisesInModal((prev) => prev.filter((e) => e.id !== item.id));
+                      } else {
+                        setSelectedExercisesInModal((prev) => [...prev, item]);
+                      }
+                    }}
+                  >
+                    <Text style={styles.exerciseName}>{item.name}</Text>
+                    <MaterialIcons
+                      name={isSelected ? "check-box" : "check-box-outline-blank"}
+                      size={24}
+                      color={isSelected ? "#FFC371" : "#ffffff"}
+                    />
+                  </TouchableOpacity>
+                );
+              }}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.modalListContainer}
+            />
+            <TouchableOpacity style={styles.addSelectedExercisesButton} onPress={addExercisesToWorkout}>
+              <Text style={styles.addSelectedExercisesButtonText}>Add {selectedExercisesInModal.length} Exercises</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  gradientBackground: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
+  gradientBackground: { flex: 1 },
+  safeArea: { flex: 1 },
+  backButton: { marginRight: 20 },
+  scrollContainer: { paddingBottom: 30 },
   header: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  addExerciseButton: {
-    marginBottom: 20,
-  },
-  addExerciseButtonGradient: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    justifyContent: 'space-between',
+    marginHorizontal: 20
+  },
+  headerTitle: { fontSize: 32, color: '#ffffff', fontWeight: 'bold' },
+  segmentedControl: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#FFC371',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 20
+  },
+  segmentButton: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  segmentButtonActive: { backgroundColor: '#FFC371' },
+  segmentText: { fontSize: 16, color: '#ffffff' },
+  segmentTextActive: { fontWeight: 'bold', color: '#000000' },
+  exercisesContainer: {},
+  inputCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4
+  },
+  inputLabel: { fontSize: 18, color: '#FFC371', marginBottom: 10 },
+  workoutNameInput: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    color: '#ffffff'
+  },
+  addExerciseButton: { marginHorizontal: 20, marginBottom: 20 },
+  addExerciseGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 8
   },
-  addExerciseButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  selectedExercisesContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    color: '#ffc371',
-    marginBottom: 10,
-  },
-  selectedExerciseCard: {
+  addExerciseText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
+  section: { marginHorizontal: 20, marginBottom: 20 },
+  sectionTitle: { fontSize: 24, color: '#FFC371', marginBottom: 10, fontWeight: 'bold' },
+  emptyText: { color: '#ffffff', fontSize: 16 },
+  exerciseCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 15,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 10
   },
-  selectedExerciseInfo: {
-    flex: 1,
-  },
-  selectedExerciseName: {
-    fontSize: 18,
-    color: '#ffffff',
-  },
-  setsRepsText: {
-    fontSize: 14,
-    color: '#cccccc',
-  },
-  restText: {
-    fontSize: 14,
-    color: '#cccccc',
-  },
-  removeExerciseButton: {
-    padding: 5,
-  },
-  statsContainer: {
-    marginBottom: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
-    borderRadius: 8,
-  },
-  statsTitle: {
-    fontSize: 22,
-    color: '#ffc371',
-    marginBottom: 10,
-  },
-  statsScroll: {
-    maxHeight: 150,
-  },
-  statItem: {
+  exerciseInfo: { flex: 1 },
+  exerciseName: { fontSize: 18, color: '#ffffff', fontWeight: 'bold' },
+  exerciseDetails: { fontSize: 14, color: '#cccccc' },
+  deleteButton: { padding: 5 },
+  statsContainer: { marginHorizontal: 20, marginBottom: 20 },
+  statsTable: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: 10 },
+  statHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFC371',
+    paddingBottom: 5,
+    marginBottom: 5
   },
-  muscleName: {
-    fontSize: 16,
-    color: '#ffffff',
-  },
-  muscleStat: {
-    fontSize: 16,
-    color: '#cccccc',
-  },
+  statHeaderCell: { flex: 1, fontSize: 16, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
+  statRow: { flexDirection: 'row', paddingVertical: 5 },
+  statCell: { flex: 1, fontSize: 16, color: '#cccccc', textAlign: 'center' },
   saveWorkoutButton: {
     backgroundColor: '#FFC371',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginHorizontal: 20,
+    marginBottom: 20
   },
-  saveWorkoutButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-  },
+  saveWorkoutButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  listContainer: { paddingBottom: 20 },
+  modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center' },
   modalContent: {
     flex: 1,
     backgroundColor: '#333333',
     borderRadius: 8,
     padding: 20,
     marginVertical: 20,
-    marginHorizontal: 10,
+    marginHorizontal: 10
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  modalTitle: { fontSize: 20, color: '#ffffff', fontWeight: 'bold' },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 10
   },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    marginLeft: 10,
-    fontSize: 16,
-  },
-  exerciseList: {
-    flex: 1,
-  },
+  searchInput: { flex: 1, color: '#ffffff', marginLeft: 10, fontSize: 16 },
+  modalListContainer: { paddingBottom: 20 },
   exerciseItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 10,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 10
   },
-  exerciseItemSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  addSelectedExercisesButton: {
-    backgroundColor: '#FF5F6D',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  addSelectedExercisesButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inputContainer: {
-    marginBottom: 10,
-  },
-  inputLabel: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginBottom: 5,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    padding: 10,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  saveButton: {
-    backgroundColor: '#FF5F6D',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  emptyText: {
-    color: '#ffffff',
-    fontSize: 16,
-  },
+  exerciseItemSelected: { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+  addSelectedExercisesButton: { backgroundColor: '#FF5F6D', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  addSelectedExercisesButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' }
 });
 
 export default CreateWorkoutScreen;

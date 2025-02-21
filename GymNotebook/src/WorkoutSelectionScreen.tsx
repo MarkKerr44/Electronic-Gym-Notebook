@@ -16,7 +16,6 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import BottomNavBar from '../components/BottomNavBar';
-// 1) Import your theme context & helpers
 import { ThemeContext } from '../context/ThemeProvider';
 import { getThemeColors } from '../context/themeHelpers';
 
@@ -58,7 +57,6 @@ const WorkoutSelectionScreen: React.FC = () => {
   const translateAnim = useRef(new Animated.Value(100)).current;
   const navigation = useNavigation();
 
-  // 2) Access the current theme and color set
   const { theme } = useContext(ThemeContext);
   const {
     gradient,
@@ -98,7 +96,6 @@ const WorkoutSelectionScreen: React.FC = () => {
   };
 
   const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {
-    // Action when user selects a premade workout
   };
 
   const renderPremadeWorkoutItem = ({ item }: { item: PremadeWorkout }) => (
