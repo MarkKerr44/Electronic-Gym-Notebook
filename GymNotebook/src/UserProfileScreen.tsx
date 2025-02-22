@@ -9,11 +9,13 @@ import {
   Alert,
   ScrollView,
   Switch,
+  Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function UserProfileScreen() {
   const navigation = useNavigation();
@@ -23,6 +25,7 @@ export default function UserProfileScreen() {
   const [height, setHeight] = useState('');
   const [isMetric, setIsMetric] = useState(true);
   const [showBMI, setShowBMI] = useState(false);
+  const [sexModalVisible, setSexModalVisible] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -116,7 +119,13 @@ export default function UserProfileScreen() {
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <Text style={styles.pageTitle}>User Profile</Text>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+              <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>User Profile</Text>
+            <View style={{ width: 24 }} />
+          </View>
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
             <View style={styles.formGroup}>
@@ -132,18 +141,11 @@ export default function UserProfileScreen() {
             </View>
             <View style={styles.formGroup}>
               <Text style={styles.label}>Sex (assigned at birth)</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={sex}
-                  onValueChange={(itemValue) => setSex(itemValue)}
-                  style={styles.picker}
-                  dropdownIconColor="#ffffff"
-                >
-                  <Picker.Item label="Select sex" value="" />
-                  <Picker.Item label="Male" value="male" />
-                  <Picker.Item label="Female" value="female" />
-                </Picker>
-              </View>
+              <TouchableOpacity style={styles.input} onPress={() => setSexModalVisible(true)}>
+                <Text style={[styles.inputText, { color: sex ? '#ffffff' : '#999' }]}>
+                  {sex ? (sex === 'male' ? 'Male' : 'Female') : 'Select sex'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
           <View style={styles.card}>
@@ -181,11 +183,24 @@ export default function UserProfileScreen() {
           <TouchableOpacity onPress={handleSaveProfile} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('DashboardScreen')} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back to Dashboard</Text>
-          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
+      <Modal transparent visible={sexModalVisible} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Sex</Text>
+            <TouchableOpacity style={styles.modalOption} onPress={() => { setSex('male'); setSexModalVisible(false); }}>
+              <Text style={styles.modalOptionText}>Male</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalOption} onPress={() => { setSex('female'); setSexModalVisible(false); }}>
+              <Text style={styles.modalOptionText}>Female</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButtonModal} onPress={() => setSexModalVisible(false)}>
+              <Text style={styles.cancelButtonModalText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -193,8 +208,10 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  scrollContainer: { padding: 20, alignItems: 'center' },
-  pageTitle: { fontSize: 28, color: '#ffffff', fontWeight: 'bold', marginBottom: 20 },
+  scrollContainer: { padding: 20, width: '100%' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  headerBackButton: { padding: 10 },
+  headerTitle: { fontSize: 28, color: '#ffffff', fontWeight: 'bold' },
   card: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.1)',
@@ -217,8 +234,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
   },
-  pickerContainer: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8 },
-  picker: { color: '#ffffff' },
+  inputText: { fontSize: 16, color: '#ffffff' },
   metricRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   metricLabel: { color: '#ffffff', fontSize: 16 },
   bmiBox: {
@@ -238,12 +254,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   saveButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
-  backButton: {
-    backgroundColor: '#302b63',
-    borderRadius: 8,
-    padding: 10,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
-    width: '100%',
   },
-  backButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#302b63',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: { fontSize: 22, color: '#FFC371', marginBottom: 20, fontWeight: 'bold' },
+  modalOption: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 5,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalOptionText: { color: '#ffffff', fontSize: 16 },
+  cancelButtonModal: {
+    marginTop: 10,
+    backgroundColor: '#FF5F6D',
+    padding: 12,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  cancelButtonModalText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
 });
+
