@@ -22,6 +22,7 @@ import ExerciseDetailScreen from './exercise/[exerciseId]';
 import CreateWorkoutScreen from './createWorkout';
 import { WorkoutDetailsScreen } from './WorkoutDetails';
 import AppearanceScreen from './AppearanceScreen';
+import AccountScreen from './AccountScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -125,6 +126,11 @@ function App() {
               name="AppearanceScreen"
               component={AppearanceScreen}
               options={{ title: 'Appearance' }}
+            />
+            <Stack.Screen
+              name="AccountScreen"
+              component={AccountScreen}
+              options={{ title: 'Account' }}
             />
           </Stack.Navigator>
         </NavigationContainer>

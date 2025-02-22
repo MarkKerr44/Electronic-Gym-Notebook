@@ -43,7 +43,7 @@ const SettingsScreen: React.FC = () => {
             <Text style={[styles.headerTitle, { color: textColor }]}>Settings</Text>
           </View>
           <View style={styles.optionContainer}>
-            <TouchableOpacity style={[styles.option, { backgroundColor: boxBackground }]}>
+            <TouchableOpacity onPress={() => navigation.navigate('AccountScreen')} style={[styles.option, { backgroundColor: boxBackground }]}>
               <View style={styles.optionIcon}>
                 <MaterialIcons name="account-circle" size={24} color={textColor} />
               </View>
