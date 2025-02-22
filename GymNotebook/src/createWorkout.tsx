@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import exercisesData from '../exercises.json';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
+import DraggableFlatList from 'react-native-draggable-flatlist';
 
 const {
   View,
@@ -44,13 +45,21 @@ const CreateWorkoutScreen: React.FC = () => {
   const navigation = useNavigation();
   const [workoutName, setWorkoutName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
-  const [viewMode, setViewMode] = useState<'exercises' | 'stats'>('exercises');
+  const [viewMode, setViewMode] = useState<'exercises' | 'view' | 'stats'>('exercises');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>(exercisesData);
   const [selectedExercisesInModal, setSelectedExercisesInModal] = useState<Exercise[]>([]);
   const [tempFilterType, setTempFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
   const [filterType, setFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<{ exercise: SelectedExercise; index: number } | null>(null);
+  const [tempSets, setTempSets] = useState('');
+  const [tempReps, setTempReps] = useState('');
+  const [tempRest, setTempRest] = useState('');
+  const [defaultSets, setDefaultSets] = useState('3');
+  const [defaultReps, setDefaultReps] = useState('10');
+  const [defaultRest, setDefaultRest] = useState('60');
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -66,9 +75,9 @@ const CreateWorkoutScreen: React.FC = () => {
   const addExercisesToWorkout = () => {
     const newSelected = selectedExercisesInModal.map((ex) => ({
       ...ex,
-      sets: 3,
-      reps: 10,
-      rest: 60
+      sets: parseInt(defaultSets) || 3,
+      reps: parseInt(defaultReps) || 10,
+      rest: parseInt(defaultRest) || 60
     }));
     setSelectedExercises((prev) => [...prev, ...newSelected]);
     setSelectedExercisesInModal([]);
@@ -100,18 +109,52 @@ const CreateWorkoutScreen: React.FC = () => {
 
   const workoutStats = calculateWorkoutStats();
 
-  const renderSelectedExercise = ({ item, index }: { item: SelectedExercise; index: number }) => (
-    <View style={styles.exerciseCard} key={index}>
+  const updateExercise = () => {
+    if (!editingExercise) return;
+    const updatedExercise = {
+      ...editingExercise.exercise,
+      sets: parseInt(tempSets) || editingExercise.exercise.sets,
+      reps: parseInt(tempReps) || editingExercise.exercise.reps,
+      rest: parseInt(tempRest) || editingExercise.exercise.rest
+    };
+    setSelectedExercises(prev => {
+      const updated = [...prev];
+      updated[editingExercise.index] = updatedExercise;
+      return updated;
+    });
+    setIsEditModalVisible(false);
+    setEditingExercise(null);
+  };
+
+  const renderSelectedExercise = ({ item, index, drag }: { item: SelectedExercise; index: number; drag?: () => void }) => (
+    <TouchableOpacity 
+      style={styles.exerciseCard} 
+      key={index}
+      onPress={() => {
+        setEditingExercise({ exercise: item, index });
+        setTempSets(item.sets.toString());
+        setTempReps(item.reps.toString());
+        setTempRest(item.rest.toString());
+        setIsEditModalVisible(true);
+      }}
+      onLongPress={drag}
+    >
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName}>{item.name}</Text>
         <Text style={styles.exerciseDetails}>
-          {item.sets} x {item.reps} | {item.rest}s
+          {item.sets} sets × {item.reps} reps | {item.rest}s rest
         </Text>
       </View>
-      <TouchableOpacity onPress={() => removeExercise(index)} style={styles.deleteButton}>
+      <TouchableOpacity 
+        onPress={(e) => {
+          e.stopPropagation();
+          removeExercise(index);
+        }} 
+        style={styles.deleteButton}
+      >
         <MaterialIcons name="delete" size={24} color="#FF5F6D" />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderStatRow = (
@@ -136,6 +179,12 @@ const CreateWorkoutScreen: React.FC = () => {
         onPress={() => setViewMode('exercises')}
       >
         <Text style={[styles.segmentText, viewMode === 'exercises' && styles.segmentTextActive]}>Exercises</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.segmentButton, viewMode === 'view' && styles.segmentButtonActive]}
+        onPress={() => setViewMode('view')}
+      >
+        <Text style={[styles.segmentText, viewMode === 'view' && styles.segmentTextActive]}>View</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.segmentButton, viewMode === 'stats' && styles.segmentButtonActive]}
@@ -170,20 +219,56 @@ const CreateWorkoutScreen: React.FC = () => {
                   placeholderTextColor="#999"
                 />
               </View>
+              <View style={styles.inputCard}>
+                <Text style={styles.inputLabel}>Default Settings</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <TextInput
+                    style={[styles.workoutNameInput, { flex: 1, marginRight: 5 }]}
+                    value={defaultSets}
+                    onChangeText={setDefaultSets}
+                    keyboardType="numeric"
+                    placeholder="Sets"
+                    placeholderTextColor="#999"
+                  />
+                  <TextInput
+                    style={[styles.workoutNameInput, { flex: 1, marginHorizontal: 5 }]}
+                    value={defaultReps}
+                    onChangeText={setDefaultReps}
+                    keyboardType="numeric"
+                    placeholder="Reps"
+                    placeholderTextColor="#999"
+                  />
+                  <TextInput
+                    style={[styles.workoutNameInput, { flex: 1, marginLeft: 5 }]}
+                    value={defaultRest}
+                    onChangeText={setDefaultRest}
+                    keyboardType="numeric"
+                    placeholder="Rest"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
               <TouchableOpacity style={styles.addExerciseButton} onPress={() => setIsAddModalVisible(true)}>
                 <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.addExerciseGradient}>
                   <MaterialIcons name="add-circle" size={30} color="#fff" />
                   <Text style={styles.addExerciseText}>Add Exercises</Text>
                 </LinearGradient>
               </TouchableOpacity>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Selected Exercises</Text>
-                {selectedExercises.length === 0 ? (
-                  <Text style={styles.emptyText}>No exercises selected.</Text>
-                ) : (
-                  selectedExercises.map((exercise, index) => renderSelectedExercise({ item: exercise, index }))
-                )}
-              </View>
+            </View>
+          )}
+          {viewMode === 'view' && (
+            <View style={styles.exercisesContainer}>
+              <Text style={styles.sectionTitle}>Selected Exercises</Text>
+              {selectedExercises.length === 0 ? (
+                <Text style={styles.emptyText}>No exercises selected.</Text>
+              ) : (
+                <DraggableFlatList
+                  data={selectedExercises}
+                  renderItem={({ item, index, drag }) => renderSelectedExercise({ item, index, drag })}
+                  keyExtractor={(item) => item.id}
+                  onDragEnd={({ data }) => setSelectedExercises(data)}
+                />
+              )}
             </View>
           )}
           {viewMode === 'stats' && (
@@ -285,6 +370,63 @@ const CreateWorkoutScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <Modal visible={isEditModalVisible} transparent={true} animationType="slide">
+        <KeyboardAvoidingView 
+          style={styles.modalContainer} 
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Exercise</Text>
+              <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.exerciseName}>
+              {editingExercise?.exercise.name}
+            </Text>
+            <View style={styles.inputCard}>
+              <Text style={styles.inputLabel}>Sets</Text>
+              <TextInput
+                style={styles.workoutNameInput}
+                value={tempSets}
+                onChangeText={setTempSets}
+                keyboardType="numeric"
+                placeholder="Number of sets"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={styles.inputCard}>
+              <Text style={styles.inputLabel}>Reps</Text>
+              <TextInput
+                style={styles.workoutNameInput}
+                value={tempReps}
+                onChangeText={setTempReps}
+                keyboardType="numeric"
+                placeholder="Number of reps"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={styles.inputCard}>
+              <Text style={styles.inputLabel}>Rest (seconds)</Text>
+              <TextInput
+                style={styles.workoutNameInput}
+                value={tempRest}
+                onChangeText={setTempRest}
+                keyboardType="numeric"
+                placeholder="Rest time in seconds"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <TouchableOpacity 
+              style={styles.saveWorkoutButton}
+              onPress={updateExercise}
+            >
+              <Text style={styles.saveWorkoutButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -294,123 +436,45 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   backButton: { marginRight: 20 },
   scrollContainer: { paddingBottom: 30 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-    justifyContent: 'space-between',
-    marginHorizontal: 20
-  },
+  header: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, justifyContent: 'space-between', marginHorizontal: 20 },
   headerTitle: { fontSize: 32, color: '#ffffff', fontWeight: 'bold' },
-  segmentedControl: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#FFC371',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: 20
-  },
+  segmentedControl: { flexDirection: 'row', marginHorizontal: 20, borderWidth: 1, borderColor: '#FFC371', borderRadius: 8, overflow: 'hidden', marginBottom: 20 },
   segmentButton: { flex: 1, paddingVertical: 10, alignItems: 'center' },
   segmentButtonActive: { backgroundColor: '#FFC371' },
   segmentText: { fontSize: 16, color: '#ffffff' },
   segmentTextActive: { fontWeight: 'bold', color: '#000000' },
   exercisesContainer: {},
-  inputCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4
-  },
+  inputCard: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: 20, marginHorizontal: 20, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 4 },
   inputLabel: { fontSize: 18, color: '#FFC371', marginBottom: 10 },
-  workoutNameInput: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 18,
-    color: '#ffffff'
-  },
+  workoutNameInput: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 12, fontSize: 18, color: '#ffffff' },
   addExerciseButton: { marginHorizontal: 20, marginBottom: 20 },
-  addExerciseGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    borderRadius: 8
-  },
+  addExerciseGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 15, borderRadius: 8 },
   addExerciseText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginLeft: 10 },
   section: { marginHorizontal: 20, marginBottom: 20 },
   sectionTitle: { fontSize: 24, color: '#FFC371', marginBottom: 10, fontWeight: 'bold' },
   emptyText: { color: '#ffffff', fontSize: 16 },
-  exerciseCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10
-  },
+  exerciseCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: 15, borderRadius: 8, marginBottom: 10 },
   exerciseInfo: { flex: 1 },
   exerciseName: { fontSize: 18, color: '#ffffff', fontWeight: 'bold' },
   exerciseDetails: { fontSize: 14, color: '#cccccc' },
   deleteButton: { padding: 5 },
   statsContainer: { marginHorizontal: 20, marginBottom: 20 },
   statsTable: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: 10 },
-  statHeader: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFC371',
-    paddingBottom: 5,
-    marginBottom: 5
-  },
+  statHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#FFC371', paddingBottom: 5, marginBottom: 5 },
   statHeaderCell: { flex: 1, fontSize: 16, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
   statRow: { flexDirection: 'row', paddingVertical: 5 },
   statCell: { flex: 1, fontSize: 16, color: '#cccccc', textAlign: 'center' },
-  saveWorkoutButton: {
-    backgroundColor: '#FFC371',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 20
-  },
+  saveWorkoutButton: { backgroundColor: '#FFC371', padding: 15, borderRadius: 8, alignItems: 'center', marginHorizontal: 20, marginBottom: 20 },
   saveWorkoutButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   listContainer: { paddingBottom: 20 },
   modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center' },
-  modalContent: {
-    flex: 1,
-    backgroundColor: '#333333',
-    borderRadius: 8,
-    padding: 20,
-    marginVertical: 20,
-    marginHorizontal: 10
-  },
+  modalContent: { flex: 1, backgroundColor: '#333333', borderRadius: 8, padding: 20, marginVertical: 20, marginHorizontal: 10 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   modalTitle: { fontSize: 20, color: '#ffffff', fontWeight: 'bold' },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10
-  },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, padding: 10, marginBottom: 10 },
   searchInput: { flex: 1, color: '#ffffff', marginLeft: 10, fontSize: 16 },
   modalListContainer: { paddingBottom: 20 },
-  exerciseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    marginBottom: 10
-  },
+  exerciseItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, marginBottom: 10 },
   exerciseItemSelected: { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
   addSelectedExercisesButton: { backgroundColor: '#FF5F6D', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
   addSelectedExercisesButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' }

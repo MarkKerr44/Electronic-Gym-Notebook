@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   FlatList,
   SafeAreaView,
-  Alert,
   Keyboard,
   Pressable,
-  Platform
+  Platform,
+  Modal,
+  Animated
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -38,11 +39,35 @@ const WeightTrackerScreen: React.FC = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterType, setFilterType] = useState<FilterType>('mostRecent');
   const [tempFilterType, setTempFilterType] = useState<FilterType>('mostRecent');
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     loadWeightEntries();
     loadUnitPreference();
   }, []);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    Animated.timing(toastOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true
+    }).start(() => {
+      setTimeout(() => {
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true
+        }).start();
+      }, 2000);
+    });
+  };
 
   const loadUnitPreference = async () => {
     try {
@@ -105,21 +130,21 @@ const WeightTrackerScreen: React.FC = () => {
   const handleAddWeight = async () => {
     const weightNumber = parseFloat(newWeight);
     if (isNaN(weightNumber) || weightNumber <= 0) {
-      Alert.alert('Invalid Input', 'Please enter a valid weight.');
+      showToast('Please enter a valid weight.', 'error');
       return;
     }
     const entryDate = formatDate(selectedDate);
     const entry: WeightEntry = {
       id: Date.now().toString(),
       weight: unit === 'kg' ? weightNumber : convertToKg(weightNumber),
-      date: entryDate,
+      date: entryDate
     };
     const updatedEntries = [entry, ...weightEntries];
     try {
       await AsyncStorage.setItem('weightEntries', JSON.stringify(updatedEntries));
       setWeightEntries(updatedEntries);
       setNewWeight('');
-      Alert.alert('Weight Added', 'Your weight entry has been saved.');
+      showToast('Your weight entry has been saved.', 'success');
       Keyboard.dismiss();
     } catch (error) {}
   };
@@ -131,17 +156,19 @@ const WeightTrackerScreen: React.FC = () => {
     }
   };
 
-  const confirmDelete = (id: string) => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteEntry(id) },
-    ]);
-  };
-
   const handleDeleteEntry = async (id: string) => {
     const updatedEntries = weightEntries.filter(entry => entry.id !== id);
     setWeightEntries(updatedEntries);
     await saveWeightEntries(updatedEntries);
+  };
+
+  const confirmDelete = (id: string) => {
+    if (dontAskAgain) {
+      handleDeleteEntry(id);
+    } else {
+      setPendingDeleteId(id);
+      setDeleteModalVisible(true);
+    }
   };
 
   const renderRightActions = (id: string) => (
@@ -187,45 +214,52 @@ const WeightTrackerScreen: React.FC = () => {
   };
 
   const ListHeaderComponent = () => (
-    <View>
+    <View style={styles.listHeaderContainer}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIcon}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Weight Tracker</Text>
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Add New Entry</Text>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={[styles.input, styles.weightInput]}
-            placeholder={`Weight (${unit})`}
-            placeholderTextColor="#ccc"
-            keyboardType="numeric"
-            value={newWeight}
-            onChangeText={setNewWeight}
-            blurOnSubmit={false}
-          />
-          <TouchableOpacity style={styles.unitButton} onPress={toggleUnit}>
-            <Text style={styles.unitButtonText}>Switch to {unit === 'kg' ? 'lbs' : 'kg'}</Text>
+      <View style={styles.cardWrapper}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Add New Entry</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, styles.weightInput]}
+              placeholder={`Weight (${unit})`}
+              placeholderTextColor="#ccc"
+              keyboardType="numeric"
+              value={newWeight}
+              onChangeText={setNewWeight}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity style={styles.unitButton} onPress={toggleUnit}>
+              <Text style={styles.unitButtonText}>Switch to {unit === 'kg' ? 'lbs' : 'kg'}</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.dateInput} onPress={() => setShowDatePicker(true)}>
+            <Ionicons name="calendar" size={20} color="#fff" />
+            <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onChangeDate}
+              maximumDate={new Date()}
+            />
+          )}
+          <TouchableOpacity style={styles.addButton} onPress={handleAddWeight}>
+            <Text style={styles.addButtonText}>Submit</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.dateInput} onPress={() => setShowDatePicker(true)}>
-          <Ionicons name="calendar" size={20} color="#fff" />
-          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={onChangeDate}
-            maximumDate={new Date()}
-          />
-        )}
-        <TouchableOpacity style={styles.addButton} onPress={handleAddWeight}>
-          <Text style={styles.addButtonText}>Submit</Text>
-        </TouchableOpacity>
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
+          <Text style={[styles.toastText, toastType === 'success' ? styles.toastSuccess : styles.toastError]}>
+            {toastMessage}
+          </Text>
+        </Animated.View>
       </View>
       <View style={styles.historyHeader}>
         <Text style={styles.historyTitle}>History</Text>
@@ -271,6 +305,30 @@ const WeightTrackerScreen: React.FC = () => {
           </View>
         </View>
       )}
+      {deleteModalVisible && (
+        <Modal transparent={true} animationType="fade" visible={deleteModalVisible}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.deleteModalContent}>
+              <Text style={styles.modalTitle}>Confirm Delete</Text>
+              <Text style={styles.deleteModalText}>Are you sure you want to delete this entry?</Text>
+              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setDontAskAgain(!dontAskAgain)}>
+                <View style={[styles.checkbox, dontAskAgain && styles.checkboxChecked]}>
+                  {dontAskAgain && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </View>
+                <Text style={styles.checkboxLabel}>Don't ask me again</Text>
+              </TouchableOpacity>
+              <View style={styles.deleteModalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => { setDeleteModalVisible(false); setPendingDeleteId(null); }}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteButtonModal} onPress={() => { if (pendingDeleteId) { handleDeleteEntry(pendingDeleteId); } setDeleteModalVisible(false); setPendingDeleteId(null); }}>
+                  <Text style={styles.deleteButtonModalText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </LinearGradient>
   );
 };
@@ -279,20 +337,22 @@ const styles = StyleSheet.create({
   gradient: { flex: 1 },
   safeArea: { flex: 1 },
   listContainer: { paddingBottom: 20 },
+  listHeaderContainer: { marginTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
   backIcon: { marginRight: 10 },
   headerTitle: { fontSize: 28, color: '#fff', fontWeight: '700' },
+  cardWrapper: { position: 'relative', marginHorizontal: 20 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
     padding: 20,
-    marginHorizontal: 20,
+    marginTop: 20,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
-    elevation: 4,
+    elevation: 4
   },
   cardTitle: { fontSize: 20, color: '#fff', fontWeight: '600', marginBottom: 15, textAlign: 'center' },
   inputRow: { flexDirection: 'row', marginBottom: 15 },
@@ -302,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    fontSize: 18,
+    fontSize: 18
   },
   weightInput: { flex: 2, marginRight: 10 },
   unitButton: {
@@ -312,7 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 8
   },
   unitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center' },
   dateInput: {
@@ -322,8 +382,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginBottom: 15,
-    marginHorizontal: 20,
+    marginBottom: 15
   },
   dateText: { color: '#fff', fontSize: 18, marginLeft: 10 },
   addButton: {
@@ -332,10 +391,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 20,
+    alignItems: 'center'
   },
   addButtonText: { color: '#fff', fontSize: 18, fontWeight: '600', marginLeft: 10 },
+  toastContainer: {
+    position: 'absolute',
+    bottom: -40,
+    alignSelf: 'center',
+    backgroundColor: '#333',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    zIndex: 10
+  },
+  toastText: { fontSize: 16 },
+  toastSuccess: { color: '#4BB543' },
+  toastError: { color: '#FF3333' },
   historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 10 },
   historyTitle: { fontSize: 22, color: '#fff', fontWeight: '600' },
   filterButton: { backgroundColor: '#FF5F6D', padding: 8, borderRadius: 8 },
@@ -347,7 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 15,
     marginHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: 10
   },
   itemLeft: { flexDirection: 'row', alignItems: 'center' },
   itemWeight: { color: '#fff', fontSize: 18, marginLeft: 10, fontWeight: '500' },
@@ -359,7 +430,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: 80,
     borderRadius: 10,
-    marginVertical: 5,
+    marginVertical: 5
   },
   deleteButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   modalOverlay: {
@@ -370,13 +441,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   modalContent: {
     backgroundColor: '#302b63',
     borderRadius: 10,
     padding: 20,
-    width: '80%',
+    width: '80%'
   },
   modalTitle: { fontSize: 22, color: '#FFC371', textAlign: 'center', marginBottom: 20 },
   modalOption: {
@@ -384,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 10,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   modalOptionActive: { backgroundColor: '#FF5F6D' },
   modalOptionText: { color: '#fff', fontSize: 16 },
@@ -393,9 +464,63 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 25,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 10
   },
   applyButtonText: { color: '#000', fontSize: 16, fontWeight: 'bold' },
+  deleteModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center'
+  },
+  deleteModalText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginVertical: 10
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  checkboxChecked: { backgroundColor: '#FF5F6D' },
+  checkboxLabel: { fontSize: 16, color: '#333' },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20
+  },
+  cancelButton: {
+    backgroundColor: '#ccc',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginRight: 10,
+    flex: 1,
+    alignItems: 'center'
+  },
+  cancelButtonText: { color: '#333', fontSize: 16, fontWeight: '600' },
+  deleteButtonModal: {
+    backgroundColor: '#FF5F6D',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center'
+  },
+  deleteButtonModalText: { color: '#fff', fontSize: 16, fontWeight: '600' }
 });
 
 export default WeightTrackerScreen;

@@ -32,7 +32,9 @@ function App() {
         <NavigationContainer>
           <Stack.Navigator
             initialRouteName="OpeningScreen"
-            screenOptions={{ animation: 'none' }}
+            screenOptions={{ animation: 'none',
+              headerShown: false
+             }}
           >
             <Stack.Screen
               name="OpeningScreen"
