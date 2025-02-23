@@ -1,4 +1,3 @@
-// DashboardScreen.tsx
 import React, { useContext, useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -9,7 +8,7 @@ import {
   ScrollView,
   Dimensions,
   Animated,
-  Modal,
+  Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -27,7 +26,6 @@ function DashboardScreen() {
   const navigation = useNavigation();
   const { theme } = useContext(ThemeContext);
   const { gradient, textColor, boxBackground, accent } = getThemeColors(theme);
-
   const [index, setIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [notifications, setNotifications] = useState([]);
@@ -118,84 +116,57 @@ function DashboardScreen() {
                     </View>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => navigation.navigate('UserProfileScreen')}
-                >
+                <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('UserProfileScreen')}>
                   <MaterialIcons name="account-circle" size={28} color={textColor} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => navigation.navigate('SettingsScreen')}
-                >
+                <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('SettingsScreen')}>
                   <MaterialIcons name="settings" size={28} color={textColor} />
                 </TouchableOpacity>
               </View>
             </View>
-            <View style={[styles.calendarContainer, { backgroundColor: boxBackground }]}>
-              <Text style={[styles.calendarTitle, { color: textColor }]}>Your Routine This Week</Text>
-              <View style={styles.dayRow}>
-                {DAYS.map((day, i) => (
-                  <View key={day} style={styles.dayCard}>
-                    <Text style={[styles.dayName, { color: textColor }]}>{day}</Text>
-                    <Text style={[styles.dayWorkout, { color: textColor }]}>
-                      {renderRoutineDay(i)}
-                    </Text>
-                  </View>
-                ))}
+            <TouchableOpacity onPress={() => navigation.navigate('RoutineCalendarScreen')}>
+              <View style={[styles.calendarContainer, { backgroundColor: boxBackground }]}>
+                <Text style={[styles.calendarTitle, { color: textColor }]}>Your Routine This Week</Text>
+                <View style={styles.dayRow}>
+                  {DAYS.map((day, i) => (
+                    <View key={day} style={styles.dayCard}>
+                      <Text style={[styles.dayName, { color: textColor }]}>{day}</Text>
+                      <Text style={[styles.dayWorkout, { color: textColor }]}>{renderRoutineDay(i)}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-              <TouchableOpacity
-                style={[styles.setRoutineButton, { backgroundColor: accent }]}
-                onPress={() => navigation.navigate('RoutineSetupScreen')}
-              >
-                <Text style={[styles.setRoutineButtonText, { color: '#ffffff' }]}>Set Routine</Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.setRoutineButton, { backgroundColor: accent }]} onPress={() => navigation.navigate('RoutineSetupScreen')}>
+              <Text style={[styles.setRoutineButtonText, { color: '#ffffff' }]}>Set Routine</Text>
+            </TouchableOpacity>
             <View style={[styles.upcomingWorkoutContainer, { backgroundColor: boxBackground }]}>
               <Text style={[styles.upcomingTitle, { color: textColor }]}>Next Workout</Text>
               <Text style={[styles.upcomingWorkoutText, { color: textColor }]}>{nextWorkout}</Text>
-              <TouchableOpacity
-                style={[styles.startButton, { backgroundColor: accent }]}
-                onPress={() => {
+              <TouchableOpacity style={[styles.startButton, { backgroundColor: accent }]} onPress={() => {
                   if (nextWorkout === 'No upcoming workout set') return;
                   navigation.navigate('WorkoutDetailScreen');
-                }}
-              >
+                }}>
                 <Text style={[styles.startButtonText, { color: '#ffffff' }]}>View Workout</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.weightTrackerButton, { backgroundColor: accent }]}
-              onPress={() => navigation.navigate('WeightTrackerScreen')}
-            >
-              <Text style={[styles.weightTrackerButtonText, { color: '#ffffff' }]}>
-                Go to Weight Tracker
-              </Text>
+            <TouchableOpacity style={[styles.weightTrackerButton, { backgroundColor: accent }]} onPress={() => navigation.navigate('WeightTrackerScreen')}>
+              <Text style={[styles.weightTrackerButtonText, { color: '#ffffff' }]}>Go to Weight Tracker</Text>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>
         <Modal visible={isNotificationPanelVisible} transparent animationType="slide">
-          <NotificationPanel
-            notifications={notifications}
-            setNotifications={setNotifications}
-            onClose={() => setNotificationPanelVisible(false)}
-          />
+          <NotificationPanel notifications={notifications} setNotifications={setNotifications} onClose={() => setNotificationPanelVisible(false)} />
         </Modal>
         <Modal visible={showOnboarding} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContainer, { backgroundColor: '#333333' }]}>
-              <Text style={[styles.modalText, { color: '#ffffff' }]}>
-                It's your first time here! Would you like to enter your info? (recommended)
-              </Text>
+              <Text style={[styles.modalText, { color: '#ffffff' }]}>It's your first time here! Would you like to enter your info? (recommended)</Text>
               <View style={styles.modalButtonRow}>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]}
-                  onPress={() => handleOnboardingChoice(true)}
-                >
+                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]} onPress={() => handleOnboardingChoice(true)}>
                   <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>Yes</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]}
-                  onPress={() => handleOnboardingChoice(false)}
-                >
+                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]} onPress={() => handleOnboardingChoice(false)}>
                   <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>No</Text>
                 </TouchableOpacity>
               </View>
@@ -216,18 +187,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 10, paddingTop: 10 },
   iconContainer: { flexDirection: 'row' },
   iconButton: { marginLeft: 20 },
-  badge: {
-    position: 'absolute',
-    right: -6,
-    top: -6,
-    backgroundColor: '#FF5F6D',
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    minWidth: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  badge: { position: 'absolute', right: -6, top: -6, backgroundColor: '#FF5F6D', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2, minWidth: 16, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
   calendarContainer: { borderRadius: 12, padding: 15, marginTop: 20 },
   calendarTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },

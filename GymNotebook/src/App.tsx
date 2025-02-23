@@ -12,7 +12,7 @@ import WorkoutSelectionScreen from './WorkoutSelectionScreen';
 import PoseEstimatorScreen from './PoseEstimatorScreen';
 import ExerciseLibraryScreen from './ExerciseLibraryScreen';
 import StartWorkoutScreen from './StartWorkout';
-import { RoutineSetupScreen } from './RoutineSetupScreen';
+import RoutineSetupScreen from './RoutineSetupScreen';
 import WorkoutHistoryScreen from './WorkoutHistoryScreen';
 import WeightTrackerScreen from './WeightTrackerScreen';
 import SettingsScreen from './SettingsScreen';
@@ -23,6 +23,7 @@ import CreateWorkoutScreen from './createWorkout';
 import { WorkoutDetailsScreen } from './WorkoutDetails';
 import AppearanceScreen from './AppearanceScreen';
 import AccountScreen from './AccountScreen';
+import RoutineCalendarScreen from './RoutineCalendarScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -131,6 +132,11 @@ function App() {
               name="AccountScreen"
               component={AccountScreen}
               options={{ title: 'Account' }}
+            />
+            <Stack.Screen
+              name="RoutineCalendarScreen"
+              component={RoutineCalendarScreen}
+              options={{ title: 'Routine Calendar' }}
             />
           </Stack.Navigator>
         </NavigationContainer>
