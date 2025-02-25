@@ -35,8 +35,15 @@ interface ExerciseLog {
   exerciseName: string;
   sets: {
     setNumber: number;
+    weight: number;      
     actualReps: number;
   }[];
+}
+
+interface Set {
+  weight: number;
+  actualReps: number;
+  setNumber: number;
 }
 
 interface WorkoutLog {
@@ -58,33 +65,50 @@ export default function StartWorkoutScreen() {
   const [restTimeLeft, setRestTimeLeft] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [actualReps, setActualReps] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
   const pendingActionRef = useRef<'SAME_EXERCISE' | 'NEXT_EXERCISE' | null>(null);
   const notificationService = useNotificationService();
+  const [lastSetWeight, setLastSetWeight] = useState<number>(0);
+  const [lastSetReps, setLastSetReps] = useState<number>(0);
 
-  const getPreviousBest = async (exerciseId: string): Promise<number> => {
+  const getPreviousBest = async (exerciseId: string): Promise<{ weight: number, reps: number }> => {
     try {
       const logs = await AsyncStorage.getItem('workoutLogs');
-      if (!logs) return 0;
+      if (!logs) return { weight: 0, reps: 0 };
 
       const parsedLogs: WorkoutLog[] = JSON.parse(logs);
-      let maxReps = 0;
+      let maxWeight = 0;
+      let repsAtMaxWeight = 0;
 
       parsedLogs.forEach(workoutLog => {
         workoutLog.exercises.forEach(exercise => {
           if (exercise.exerciseId === exerciseId) {
             exercise.sets.forEach(set => {
-              if (set.actualReps > maxReps) {
-                maxReps = set.actualReps;
+              if (set.weight > maxWeight) {
+                maxWeight = set.weight;
+                repsAtMaxWeight = set.actualReps;
               }
             });
           }
         });
       });
 
-      return maxReps;
+      return { weight: maxWeight, reps: repsAtMaxWeight };
     } catch (error) {
       console.error('Error getting previous best:', error);
-      return 0;
+      return { weight: 0, reps: 0 };
+    }
+  };
+
+  const checkForPersonalBest = async (exercise: ExerciseLog) => {
+    const previousBest = await getPreviousBest(exercise.exerciseId);
+    const currentMaxWeight = Math.max(...exercise.sets.map(s => s.weight));
+    
+    if (currentMaxWeight > previousBest.weight) {
+      notificationService.notifyPersonalBest(
+        exercise.exerciseName,
+        `${currentMaxWeight}kg`
+      );
     }
   };
 
@@ -161,38 +185,53 @@ export default function StartWorkoutScreen() {
     } catch (error) {}
   };
 
-  const handleCompleteSet = () => {
-    Keyboard.dismiss();
-    if (!workout) return;
-    const currentExercise = workout.exercises[currentExerciseIndex];
-    const reps = parseInt(actualReps) || currentExercise.reps;
-    setExerciseLogs(prev => {
-      const existingLog = prev.find(log => log.exerciseId === currentExercise.id);
-      if (existingLog) {
-        existingLog.sets.push({ setNumber: currentSetNumber, actualReps: reps });
-        return [...prev];
-      } else {
-        const newLog: ExerciseLog = {
-          exerciseId: currentExercise.id,
-          exerciseName: currentExercise.name,
-          sets: [{ setNumber: currentSetNumber, actualReps: reps }]
-        };
-        return [...prev, newLog];
-      }
-    });
-    setActualReps('');
-    const doneWithSets = currentSetNumber >= currentExercise.sets;
-    const isLastExercise = currentExerciseIndex >= workout.exercises.length - 1;
-    if (!doneWithSets) {
-      pendingActionRef.current = 'SAME_EXERCISE';
-      startRestTimer(currentExercise.rest);
-    } else if (!isLastExercise) {
-      pendingActionRef.current = 'NEXT_EXERCISE';
-      startRestTimer(currentExercise.rest);
+const handleCompleteSet = () => {
+  Keyboard.dismiss();
+  if (!workout) return;
+  const currentExercise = workout.exercises[currentExerciseIndex];
+  const currentWeight = parseFloat(weight) || lastSetWeight || 0;
+  const reps = parseInt(actualReps) || currentExercise.reps;
+
+  setLastSetWeight(currentWeight);
+  setLastSetReps(reps);
+
+  setExerciseLogs(prev => {
+    const existingLog = prev.find(log => log.exerciseId === currentExercise.id);
+    if (existingLog) {
+      existingLog.sets.push({
+        setNumber: currentSetNumber,
+        actualReps: reps,
+        weight: currentWeight  
+      });
+      return [...prev];
     } else {
-      saveWorkoutLog();
+      const newLog: ExerciseLog = {
+        exerciseId: currentExercise.id,
+        exerciseName: currentExercise.name,
+        sets: [{
+          setNumber: currentSetNumber,
+          actualReps: reps,
+          weight: currentWeight
+        }]
+      };
+      return [...prev, newLog];
     }
-  };
+  });
+
+  setActualReps('');
+  setWeight('');  
+  const doneWithSets = currentSetNumber >= currentExercise.sets;
+  const isLastExercise = currentExerciseIndex >= workout.exercises.length - 1;
+  if (!doneWithSets) {
+    pendingActionRef.current = 'SAME_EXERCISE';
+    startRestTimer(currentExercise.rest);
+  } else if (!isLastExercise) {
+    pendingActionRef.current = 'NEXT_EXERCISE';
+    startRestTimer(currentExercise.rest);
+  } else {
+    saveWorkoutLog();
+  }
+};
 
   const startRestTimer = (restTime: number) => {
     setIsResting(true);
@@ -224,9 +263,12 @@ export default function StartWorkoutScreen() {
     if (!workout) return;
     if (pendingActionRef.current === 'SAME_EXERCISE') {
       setCurrentSetNumber(prev => prev + 1);
-    } else {
+    } else if (pendingActionRef.current === 'NEXT_EXERCISE') {
       setCurrentExerciseIndex(prev => prev + 1);
       setCurrentSetNumber(1);
+      setWeight('');
+      setLastSetWeight(0);
+      setLastSetReps(0);
     }
     pendingActionRef.current = null;
   };
@@ -242,15 +284,7 @@ export default function StartWorkoutScreen() {
     if (!workout) return;
     try {
       for (const exercise of exerciseLogs) {
-        const previousBest = await getPreviousBest(exercise.exerciseId);
-        const currentBest = Math.max(...exercise.sets.map(s => s.actualReps));
-        
-        if (currentBest > previousBest) {
-          notificationService.notifyPersonalBest(
-            exercise.exerciseName,
-            `${currentBest} reps`
-          );
-        }
+        await checkForPersonalBest(exercise);
       }
 
       const lastWorkout = await getLastWorkoutOfType(workout.id);
@@ -298,6 +332,13 @@ export default function StartWorkoutScreen() {
     await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(parsedCalendar));
   };
 
+  const calculateSuggestedWeight = () => {
+    if (lastSetReps > currentExercise.reps + 2) {
+      return lastSetWeight + 2.5;
+    }
+    return lastSetWeight;
+  };
+
   if (!workout) return null;
   const currentExercise = workout.exercises[currentExerciseIndex];
 
@@ -325,22 +366,49 @@ export default function StartWorkoutScreen() {
             </View>
           ) : (
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Actual Reps:</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={actualReps}
-                onChangeText={setActualReps}
-                placeholder="Enter reps completed"
-                placeholderTextColor="#999"
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
+              <View style={styles.inputRow}>
+                <View style={styles.inputField}>
+                  <Text style={styles.inputLabel}>Weight (kg):</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={weight === '' ? (lastSetWeight > 0 ? lastSetWeight.toString() : '') : weight}
+                    onChangeText={(text) => {
+                      const cleanedText = text.replace(/^0+/, '');
+                      setWeight(cleanedText);
+                    }}
+                    placeholder="0"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.inputField}>
+                  <Text style={styles.inputLabel}>Reps:</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={actualReps}
+                    onChangeText={setActualReps}
+                    placeholder={currentExercise?.reps.toString()}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
               <TouchableOpacity style={styles.completeSetButton} onPress={handleCompleteSet}>
                 <Text style={styles.completeSetButtonText}>Complete Set</Text>
               </TouchableOpacity>
             </View>
           )}
+          <View style={styles.previousSetInfo}>
+            {currentSetNumber > 1 && (
+              <>
+                <Text style={styles.previousSetLabel}>Previous Set: {currentSetNumber - 1}</Text>
+                <Text style={styles.previousSetDetails}>{lastSetWeight}kg × {lastSetReps} reps</Text>
+                <Text style={styles.suggestedWeight}>
+                  Suggested next weight: {calculateSuggestedWeight()}kg
+                </Text>
+              </>
+            )}
+          </View>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -411,18 +479,26 @@ const styles = StyleSheet.create({
     marginTop: 30,
     width: '100%'
   },
+  inputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inputField: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
   inputLabel: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginBottom: 10
+    color: '#fff',
+    marginBottom: 4,
+    fontSize: 16,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#2a2a2a',
     borderRadius: 8,
-    padding: 15,
-    color: '#ffffff',
-    fontSize: 18,
-    marginBottom: 20
+    padding: 12,
+    color: '#fff',
+    fontSize: 16,
   },
   completeSetButton: {
     backgroundColor: '#FF5F6D',
@@ -434,5 +510,14 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold'
-  }
+  },
+  previousSetInfo: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  previousSetLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
 });

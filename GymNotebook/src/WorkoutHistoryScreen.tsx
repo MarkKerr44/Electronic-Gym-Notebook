@@ -21,6 +21,7 @@ interface ExerciseLog {
   sets: {
     setNumber: number;
     actualReps: number;
+    weight: number;  
   }[];
 }
 
@@ -105,14 +106,31 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
 
   const renderExerciseItem = (exercise: ExerciseLog) => {
     let totalReps = 0;
+    let maxWeight = 0;
+    let totalVolume = 0;  
+
     exercise.sets.forEach(s => {
       totalReps += s.actualReps;
+      maxWeight = Math.max(maxWeight, s.weight);
+      totalVolume += s.weight * s.actualReps;
     });
+
     return (
       <View style={styles.exerciseDetail}>
         <Text style={styles.exerciseTitle}>{exercise.exerciseName}</Text>
         <Text style={styles.exerciseSets}>Sets: {exercise.sets.length}</Text>
-        <Text style={styles.exerciseTotalReps}>Total Reps: {totalReps}</Text>
+        <Text style={styles.exerciseStats}>Max Weight: {maxWeight}kg</Text>
+        <Text style={styles.exerciseStats}>Total Volume: {totalVolume}kg</Text>
+        
+        <View style={styles.setsContainer}>
+          {exercise.sets.map((set, index) => (
+            <View key={index} style={styles.setRow}>
+              <Text style={styles.setText}>
+                Set {set.setNumber}: {set.weight}kg × {set.actualReps} reps
+              </Text>
+            </View>
+          ))}
+        </View>
       </View>
     );
   };
@@ -291,7 +309,27 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold'
-  }
+  },
+  exerciseStats: {
+    fontSize: 14,
+    color: '#DDD',
+    marginBottom: 4,
+  },
+  setsContainer: {
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 8,
+  },
+  setRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  setText: {
+    fontSize: 14,
+    color: '#DDD',
+  },
 });
 
 export default WorkoutHistoryScreen;
