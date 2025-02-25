@@ -1,5 +1,4 @@
-// WorkoutHistoryScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,11 +8,11 @@ import {
   FlatList,
   Animated,
   Easing,
-  Platform,
+  Platform
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 interface ExerciseLog {
@@ -32,28 +31,45 @@ interface WorkoutLog {
   exercises: ExerciseLog[];
 }
 
-const WorkoutHistoryScreen: React.FC = () => {
+interface RouteParams {
+  highlightLogId?: string;
+}
+
+interface Props {
+  route?: {
+    params?: RouteParams;
+  };
+}
+
+const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [expandedIndexes, setExpandedIndexes] = useState<number[]>([]);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const translateAnim = React.useRef(new Animated.Value(50)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(50)).current;
   const navigation = useNavigation();
+  const listRef = useRef<FlatList<WorkoutLog>>(null);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 800,
       easing: Easing.out(Easing.exp),
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start();
     Animated.timing(translateAnim, {
       toValue: 0,
       duration: 800,
       easing: Easing.out(Easing.exp),
-      useNativeDriver: true,
+      useNativeDriver: true
     }).start();
     loadWorkoutLogs();
   }, []);
+
+  useEffect(() => {
+    if (route?.params?.highlightLogId) {
+      highlightWorkout(route.params.highlightLogId);
+    }
+  }, [route?.params?.highlightLogId]);
 
   const loadWorkoutLogs = async () => {
     try {
@@ -64,9 +80,17 @@ const WorkoutHistoryScreen: React.FC = () => {
     } catch (error) {}
   };
 
+  const highlightWorkout = (logId: string) => {
+    const index = workoutLogs.findIndex(log => log.workoutId === logId);
+    if (index >= 0) {
+      setExpandedIndexes([index]);
+      listRef.current?.scrollToIndex({ index, animated: true });
+    }
+  };
+
   const handleToggleExpand = (index: number) => {
     if (expandedIndexes.includes(index)) {
-      setExpandedIndexes(expandedIndexes.filter((i) => i !== index));
+      setExpandedIndexes(expandedIndexes.filter(i => i !== index));
     } else {
       setExpandedIndexes([...expandedIndexes, index]);
     }
@@ -81,7 +105,7 @@ const WorkoutHistoryScreen: React.FC = () => {
 
   const renderExerciseItem = (exercise: ExerciseLog) => {
     let totalReps = 0;
-    exercise.sets.forEach((s) => {
+    exercise.sets.forEach(s => {
       totalReps += s.actualReps;
     });
     return (
@@ -101,8 +125,8 @@ const WorkoutHistoryScreen: React.FC = () => {
           styles.historyItem,
           {
             opacity: fadeAnim,
-            transform: [{ translateY: translateAnim }],
-          },
+            transform: [{ translateY: translateAnim }]
+          }
         ]}
       >
         <TouchableOpacity onPress={() => handleToggleExpand(index)} style={styles.historyHeader}>
@@ -121,7 +145,7 @@ const WorkoutHistoryScreen: React.FC = () => {
               Exercises: {item.exercises.length}
             </Text>
             <View>
-              {item.exercises.map((exercise) => (
+              {item.exercises.map(exercise => (
                 <View key={exercise.exerciseId}>{renderExerciseItem(exercise)}</View>
               ))}
             </View>
@@ -132,10 +156,7 @@ const WorkoutHistoryScreen: React.FC = () => {
   };
 
   return (
-    <LinearGradient
-      colors={['#0f0c29', '#302b63', '#24243e']}
-      style={styles.gradientBackground}
-    >
+    <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -149,6 +170,7 @@ const WorkoutHistoryScreen: React.FC = () => {
           </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={workoutLogs.sort(
               (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
             )}
@@ -169,107 +191,107 @@ const WorkoutHistoryScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   gradientBackground: {
-    flex: 1,
+    flex: 1
   },
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 25 : 0,
+    paddingTop: Platform.OS === 'android' ? 25 : 0
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 20
   },
   backButton: {
-    marginRight: 10,
+    marginRight: 10
   },
   headerTitle: {
     fontSize: 24,
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontWeight: 'bold'
   },
   noHistoryContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   noHistoryText: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: '#FFFFFF'
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingBottom: 20
   },
   historyItem: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginHorizontal: 20,
     marginBottom: 10,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
+    padding: 15
   },
   historyWorkoutName: {
     fontSize: 18,
     color: '#FFFFFF',
     fontWeight: 'bold',
-    flex: 1,
+    flex: 1
   },
   historyDate: {
     fontSize: 12,
     color: '#DDDDDD',
-    marginRight: 8,
+    marginRight: 8
   },
   expandIcon: {},
   historyDetails: {
     paddingHorizontal: 15,
-    paddingBottom: 10,
+    paddingBottom: 10
   },
   exerciseCount: {
     fontSize: 16,
     color: '#FFC371',
-    marginBottom: 5,
+    marginBottom: 5
   },
   exerciseDetail: {
     marginBottom: 10,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
-    padding: 10,
+    padding: 10
   },
   exerciseTitle: {
     fontSize: 16,
     color: '#FFF',
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: 5
   },
   exerciseSets: {
     fontSize: 14,
-    color: '#DDD',
+    color: '#DDD'
   },
   exerciseTotalReps: {
     fontSize: 14,
-    color: '#DDD',
+    color: '#DDD'
   },
   clearContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 20
   },
   clearButton: {
     backgroundColor: '#FF5F6D',
     borderRadius: 8,
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 15
   },
   clearButtonText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: 'bold',
-  },
+    fontWeight: 'bold'
+  }
 });
 
 export default WorkoutHistoryScreen;

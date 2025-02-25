@@ -1,4 +1,3 @@
-// StartWorkoutScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -9,7 +8,7 @@ import {
   SafeAreaView,
   TextInput,
   Platform,
-  Keyboard,
+  Keyboard
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -71,7 +70,7 @@ export default function StartWorkoutScreen() {
     try {
       const storedWorkouts = await AsyncStorage.getItem('workouts');
       const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      const foundWorkout = parsedWorkouts.find((w) => w.id === workoutId);
+      const foundWorkout = parsedWorkouts.find(w => w.id === workoutId);
       if (foundWorkout) {
         setWorkout(foundWorkout);
       } else {
@@ -86,8 +85,8 @@ export default function StartWorkoutScreen() {
     if (!workout) return;
     const currentExercise = workout.exercises[currentExerciseIndex];
     const reps = parseInt(actualReps) || currentExercise.reps;
-    setExerciseLogs((prev) => {
-      const existingLog = prev.find((log) => log.exerciseId === currentExercise.id);
+    setExerciseLogs(prev => {
+      const existingLog = prev.find(log => log.exerciseId === currentExercise.id);
       if (existingLog) {
         existingLog.sets.push({ setNumber: currentSetNumber, actualReps: reps });
         return [...prev];
@@ -95,7 +94,7 @@ export default function StartWorkoutScreen() {
         const newLog: ExerciseLog = {
           exerciseId: currentExercise.id,
           exerciseName: currentExercise.name,
-          sets: [{ setNumber: currentSetNumber, actualReps: reps }],
+          sets: [{ setNumber: currentSetNumber, actualReps: reps }]
         };
         return [...prev, newLog];
       }
@@ -118,7 +117,7 @@ export default function StartWorkoutScreen() {
     setIsResting(true);
     setRestTimeLeft(restTime);
     timerRef.current = setInterval(() => {
-      setRestTimeLeft((prevTime) => {
+      setRestTimeLeft(prevTime => {
         if (prevTime <= 1) {
           clearInterval(timerRef.current!);
           setIsResting(false);
@@ -143,34 +142,59 @@ export default function StartWorkoutScreen() {
   const handleRestComplete = () => {
     if (!workout) return;
     if (pendingActionRef.current === 'SAME_EXERCISE') {
-      setCurrentSetNumber((prev) => prev + 1);
+      setCurrentSetNumber(prev => prev + 1);
     } else {
-      setCurrentExerciseIndex((prev) => prev + 1);
+      setCurrentExerciseIndex(prev => prev + 1);
       setCurrentSetNumber(1);
     }
     pendingActionRef.current = null;
   };
 
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const saveWorkoutLog = async () => {
     if (!workout) return;
-    const workoutLog: WorkoutLog = {
-      workoutId: workout.id,
-      workoutName: workout.name,
-      date: new Date().toISOString(),
-      exercises: exerciseLogs,
-    };
     try {
       const existingLogs = await AsyncStorage.getItem('workoutLogs');
       const logs = existingLogs ? JSON.parse(existingLogs) : [];
+      const workoutLogId = `${workout.id}-${new Date().getTime()}`;
+      const workoutLog: WorkoutLog = {
+        workoutId: workoutLogId,
+        workoutName: workout.name,
+        date: new Date().toISOString(),
+        exercises: exerciseLogs
+      };
       logs.push(workoutLog);
       await AsyncStorage.setItem('workoutLogs', JSON.stringify(logs));
+      await updateCalendarWithCompletedWorkout(workoutLog);
       Alert.alert('Workout completed', 'Your workout has been logged.');
       navigation.navigate('DashboardScreen');
     } catch (error) {}
   };
 
+  const updateCalendarWithCompletedWorkout = async (workoutLog: WorkoutLog) => {
+    const dateStr = formatDate(new Date(workoutLog.date));
+    const calendarWorkouts = await AsyncStorage.getItem('allCalendarWorkouts');
+    const parsedCalendar = calendarWorkouts ? JSON.parse(calendarWorkouts) : {};
+    if (!parsedCalendar[dateStr]) {
+      parsedCalendar[dateStr] = [];
+    }
+    parsedCalendar[dateStr].push({
+      name: workoutLog.workoutName,
+      status: 'completed',
+      workoutLogId: workoutLog.workoutId
+    });
+    await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(parsedCalendar));
+  };
+
   if (!workout) return null;
   const currentExercise = workout.exercises[currentExerciseIndex];
+
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.container}>
@@ -219,72 +243,72 @@ export default function StartWorkoutScreen() {
 
 const styles = StyleSheet.create({
   gradientBackground: {
-    flex: 1,
+    flex: 1
   },
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 25 : 0,
+    paddingTop: Platform.OS === 'android' ? 25 : 0
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 20
   },
   backButton: {
-    marginRight: 10,
+    marginRight: 10
   },
   headerTitle: {
     fontSize: 24,
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontWeight: 'bold'
   },
   exerciseContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 20
   },
   exerciseName: {
     fontSize: 28,
     color: '#FFC371',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 20
   },
   setsRepsText: {
     fontSize: 20,
     color: '#FFFFFF',
-    marginBottom: 10,
+    marginBottom: 10
   },
   restContainer: {
     marginTop: 30,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   restText: {
     fontSize: 24,
     color: '#FF5F6D',
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 20
   },
   skipButton: {
     backgroundColor: '#FF5F6D',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 8
   },
   skipButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: 'bold'
   },
   inputContainer: {
     marginTop: 30,
-    width: '100%',
+    width: '100%'
   },
   inputLabel: {
     fontSize: 18,
     color: '#FFFFFF',
-    marginBottom: 10,
+    marginBottom: 10
   },
   input: {
     backgroundColor: 'rgba(255,255,255,0.1)',
@@ -292,18 +316,17 @@ const styles = StyleSheet.create({
     padding: 15,
     color: '#ffffff',
     fontSize: 18,
-    marginBottom: 20,
+    marginBottom: 20
   },
   completeSetButton: {
     backgroundColor: '#FF5F6D',
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   completeSetButtonText: {
     color: '#ffffff',
     fontSize: 18,
-    fontWeight: 'bold',
-  },
+    fontWeight: 'bold'
+  }
 });
-

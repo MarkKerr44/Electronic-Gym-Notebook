@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Modal, Dimensions, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  Dimensions,
+  TextInput,
+  Modal
+} from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -9,11 +19,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type RootStackParamList = {
   RoutineCalendarScreen: { routineToApply?: Routine } | undefined;
   DashboardScreen: undefined;
+  WorkoutHistoryScreen: { highlightLogId?: string };
 };
 
 type DayWorkout = {
   name: string;
   status: 'scheduled' | 'completed' | 'missed';
+  workoutLogId?: string;
 };
 
 interface Routine {
@@ -25,6 +37,23 @@ interface Routine {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DAYS_TO_FILL = 30;
+const SPACING = { xs: 8, sm: 12, md: 16, lg: 24 };
+const STATUS_COLORS: { [key: string]: string } = {
+  scheduled: '#3498db',
+  completed: '#2ecc71',
+  missed: '#e74c3c'
+};
+
+function getStatusIcon(status: string) {
+  if (status === 'completed') return 'check-circle';
+  if (status === 'missed') return 'highlight-off';
+  return 'schedule';
+}
+
+const colorPalette = [
+  '#3498db','#2ecc71','#e74c3c','#9b59b6','#f1c40f','#1abc9c',
+  '#e67e22','#FF69B4','#8e44ad','#2c3e50','#FFC371','#4BB543'
+];
 
 export default function RoutineCalendarScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -32,23 +61,17 @@ export default function RoutineCalendarScreen() {
   const [markedDates, setMarkedDates] = useState<{ [key: string]: any }>({});
   const [allWorkouts, setAllWorkouts] = useState<{ [date: string]: DayWorkout[] }>({});
   const [allSavedWorkouts, setAllSavedWorkouts] = useState<{ id: string; name: string }[]>([]);
-  const [showDayModal, setShowDayModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [savedRoutines, setSavedRoutines] = useState<Routine[]>([]);
+  const [legendColors, setLegendColors] = useState<{ [workoutName: string]: string }>({});
   const [currentDate, setCurrentDate] = useState('');
   const [modalWorkouts, setModalWorkouts] = useState<DayWorkout[]>([]);
   const [newWorkoutName, setNewWorkoutName] = useState('');
-  const [legendColors, setLegendColors] = useState<{ [workoutName: string]: string }>({});
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showRoutineModal, setShowRoutineModal] = useState(false);
-  const [savedRoutines, setSavedRoutines] = useState<Routine[]>([]);
-  const colorPalette = [
-    '#3498db','#2ecc71','#e74c3c','#9b59b6','#f1c40f','#1abc9c',
-    '#e67e22','#FF69B4','#8e44ad','#2c3e50','#FFC371','#4BB543'
-  ];
 
   useEffect(() => {
-    loadSavedWorkouts();
-    loadStoredCalendar();
-    loadSavedRoutines();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -59,124 +82,92 @@ export default function RoutineCalendarScreen() {
     }
   }, [route.params]);
 
-  async function loadSavedWorkouts() {
-    const data = await AsyncStorage.getItem('workouts');
-    if (data) {
-      const arr = JSON.parse(data);
-      const minimal = arr.map((w: any) => ({ id: w.id, name: w.name }));
-      setAllSavedWorkouts(minimal);
+  async function loadData() {
+    const dataWorkouts = await AsyncStorage.getItem('workouts');
+    if (dataWorkouts) {
+      const arr = JSON.parse(dataWorkouts).map((w: any) => ({ id: w.id, name: w.name }));
+      setAllSavedWorkouts(arr);
     }
-  }
-
-  async function loadStoredCalendar() {
-    const data = await AsyncStorage.getItem('allCalendarWorkouts');
-    if (data) {
-      const parsed = JSON.parse(data);
+    const dataCalendar = await AsyncStorage.getItem('allCalendarWorkouts');
+    if (dataCalendar) {
+      const parsed = JSON.parse(dataCalendar);
       setAllWorkouts(parsed);
       setMarkedDates(generateMarkedDates(parsed));
     }
-  }
-
-  async function loadSavedRoutines() {
-    try {
-      const data = await AsyncStorage.getItem('savedRoutines');
-      if (data) {
-        setSavedRoutines(JSON.parse(data));
-      }
-    } catch (error) {}
-  }
-
-
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await loadSavedWorkouts();
-      await loadStoredCalendar();
-      await loadSavedRoutines();
-    };
-    loadInitialData();
-  }, []); 
-  
-  useEffect(() => {
-    const params = route.params as { routineToApply?: Routine };
-    if (params?.routineToApply) {
-      applyRoutine(params.routineToApply);
-      navigation.setParams({ routineToApply: undefined });
+    const dataRoutines = await AsyncStorage.getItem('savedRoutines');
+    if (dataRoutines) {
+      setSavedRoutines(JSON.parse(dataRoutines));
     }
-  }, [route.params]); 
+  }
 
   async function applyRoutine(routine: Routine) {
     const today = new Date();
     const updatedWorkouts = { ...allWorkouts };
-    
     for (let i = 0; i < DAYS_TO_FILL; i++) {
       const loopDate = new Date();
       loopDate.setDate(today.getDate() + i);
       const dateString = formatDate(loopDate);
-  
-      if (loopDate < today || updatedWorkouts[dateString]?.length > 0) {
-        continue;
-      }
-  
-      let dayWorkout: string;
+      if (loopDate < today || updatedWorkouts[dateString]?.length > 0) continue;
+      let dayWorkout = '';
       if (routine.type === 'fixedDays') {
-        const dayOfWeek = loopDate.getDay(); 
-        dayWorkout = routine.schedule[dayOfWeek];
+        dayWorkout = routine.schedule[loopDate.getDay()];
       } else {
         const cycleLength = routine.cycleItems?.length || 0;
         if (cycleLength === 0) continue;
         const dayInCycle = i % cycleLength;
         dayWorkout = routine.cycleItems![dayInCycle];
       }
-  
       if (dayWorkout?.trim()) {
-        updatedWorkouts[dateString] = [{
-          name: dayWorkout,
-          status: 'scheduled'
-        }];
+        updatedWorkouts[dateString] = [{ name: dayWorkout, status: 'scheduled' }];
       }
     }
-  
-    try {
-      await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(updatedWorkouts));
-      setAllWorkouts(updatedWorkouts);
-      setMarkedDates(generateMarkedDates(updatedWorkouts));
-      setShowRoutineModal(false);
-    } catch (error) {
-      console.error('Failed to save routine:', error);
-    }
+    await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(updatedWorkouts));
+    setAllWorkouts(updatedWorkouts);
+    setMarkedDates(generateMarkedDates(updatedWorkouts));
   }
-  
 
   function generateMarkedDates(data: { [date: string]: DayWorkout[] }) {
     const finalMarked: { [key: string]: any } = {};
     const usedColors: { [key: string]: string } = {};
-
     Object.keys(data).forEach(date => {
-      if (!finalMarked[date]) finalMarked[date] = { dots: [] };
-      data[date].forEach(workout => {
+      if (!finalMarked[date]) {
+        finalMarked[date] = {
+          dots: [],
+          customStyles: {
+            container: {
+              backgroundColor: data[date].some(w => w.status === 'missed')
+                ? 'rgba(231, 76, 60, 0.1)'
+                : data[date].some(w => w.status === 'completed')
+                  ? 'rgba(46, 204, 113, 0.1)'
+                  : 'transparent'
+            }
+          }
+        };
+      }
+      data[date].forEach((workout, index) => {
         if (!usedColors[workout.name]) {
           usedColors[workout.name] =
             colorPalette[Object.keys(usedColors).length % colorPalette.length];
         }
         let dotColor = usedColors[workout.name];
         if (workout.status === 'missed') {
-          dotColor = '#555';
+          dotColor = STATUS_COLORS.missed;
+        } else if (workout.status === 'completed') {
+          dotColor = STATUS_COLORS.completed;
         }
         finalMarked[date].dots.push({
-          key: workout.name,
+          key: `${workout.name}-${index}`,
           color: dotColor,
           selectedDotColor: dotColor
         });
       });
     });
-
     setLegendColors(usedColors);
-
     const today = new Date();
     const todayStr = formatDate(today);
     if (finalMarked[todayStr]) {
       finalMarked[todayStr].selected = true;
-      finalMarked[todayStr].selectedColor = '#3c40c6';
+      finalMarked[todayStr].selectedColor = 'rgba(52, 152, 219, 0.2)';
     }
     return finalMarked;
   }
@@ -190,12 +181,18 @@ export default function RoutineCalendarScreen() {
 
   function handleDayPress(day: DateData) {
     const list = allWorkouts[day.dateString] || [];
+    const completedWorkouts = list.filter(w => w.status === 'completed');
+    if (completedWorkouts.length > 0 && completedWorkouts[0].workoutLogId) {
+      navigation.navigate('WorkoutHistoryScreen', {
+        highlightLogId: completedWorkouts[0].workoutLogId
+      });
+      return;
+    }
     setCurrentDate(day.dateString);
+    setModalWorkouts(list);
     if (list.length === 0) {
-      setModalWorkouts([]);
       setShowAddModal(true);
     } else {
-      setModalWorkouts(list);
       setShowDayModal(true);
     }
   }
@@ -238,6 +235,30 @@ export default function RoutineCalendarScreen() {
     AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(updatedAll));
   }
 
+  async function clearFutureWorkouts() {
+    const today = new Date();
+    const updatedWorkouts = { ...allWorkouts };
+    Object.keys(updatedWorkouts).forEach(dateStr => {
+      const workoutDate = new Date(dateStr);
+      if (workoutDate >= today) {
+        updatedWorkouts[dateStr] = updatedWorkouts[dateStr].filter(
+          w => w.status !== 'scheduled'
+        );
+        if (updatedWorkouts[dateStr].length === 0) {
+          delete updatedWorkouts[dateStr];
+        }
+      }
+    });
+    await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(updatedWorkouts));
+    setAllWorkouts(updatedWorkouts);
+    setMarkedDates(generateMarkedDates(updatedWorkouts));
+  }
+
+  async function switchRoutine(newRoutine: Routine) {
+    await clearFutureWorkouts();
+    await applyRoutine(newRoutine);
+  }
+
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.safeArea}>
@@ -246,7 +267,9 @@ export default function RoutineCalendarScreen() {
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Routine Calendar</Text>
-          <View style={{ width: 24 }} />
+          <TouchableOpacity onPress={() => setShowRoutineModal(true)} style={styles.headerBackButton}>
+            <MaterialIcons name="auto-fix-high" size={24} color="#ffffff" />
+          </TouchableOpacity>
         </View>
         <Calendar
           style={styles.calendar}
@@ -261,10 +284,11 @@ export default function RoutineCalendarScreen() {
             monthTextColor: '#ffffff',
             arrowColor: '#ffffff',
             textDisabledColor: '#777',
-            selectedDayBackgroundColor: '#3c40c6',
-            textDayFontSize: 18,
+            selectedDayBackgroundColor: '#3498db',
+            textDayFontSize: 16,
             textMonthFontSize: 20,
-            textDayHeaderFontSize: 14
+            textDayHeaderFontSize: 14,
+            todayTextColor: '#3498db'
           }}
         />
         <View style={styles.legendContainer}>
@@ -278,54 +302,60 @@ export default function RoutineCalendarScreen() {
             ))}
           </ScrollView>
           <View style={styles.legendStatusRow}>
-            <View style={[styles.legendStatusBox, { backgroundColor: '#4BB543' }]} />
+            <MaterialIcons name={getStatusIcon('completed')} size={20} color={STATUS_COLORS.completed} />
             <Text style={styles.legendStatusText}>Completed</Text>
-            <View style={[styles.legendStatusBox, { backgroundColor: '#555', marginLeft: 20 }]} />
+            <View style={{ width: SPACING.md }} />
+            <MaterialIcons name={getStatusIcon('missed')} size={20} color={STATUS_COLORS.missed} />
             <Text style={styles.legendStatusText}>Missed</Text>
-            <View style={[styles.legendStatusBox, { backgroundColor: '#999', marginLeft: 20 }]} />
+            <View style={{ width: SPACING.md }} />
+            <MaterialIcons name={getStatusIcon('scheduled')} size={20} color={STATUS_COLORS.scheduled} />
             <Text style={styles.legendStatusText}>Scheduled</Text>
           </View>
         </View>
-        <Modal visible={showDayModal} transparent>
+        <Modal
+          visible={showDayModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDayModal(false)}
+        >
           <View style={styles.modalOverlay}>
-            <View style={styles.addModalInner}>
+            <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{currentDate}</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseIcon}
-                  onPress={() => setShowDayModal(false)}
-                >
+                <Text style={styles.sheetTitle}>{currentDate}</Text>
+                <TouchableOpacity onPress={() => setShowDayModal(false)}>
                   <MaterialIcons name="close" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
-              <ScrollView style={{ maxHeight: 300, marginBottom: 10 }}>
+              <ScrollView style={{ maxHeight: 300 }}>
                 {modalWorkouts.map((w, i) => (
                   <View style={styles.workoutRow} key={i.toString()}>
                     <Text style={styles.workoutText}>{w.name}</Text>
-                    <TouchableOpacity onPress={() => toggleStatus(i)} style={styles.statusButton}>
-                      <Text style={styles.statusButtonText}>{w.status}</Text>
+                    <TouchableOpacity style={styles.statusIcon} onPress={() => toggleStatus(i)}>
+                      <MaterialIcons name={getStatusIcon(w.status)} size={24} color={STATUS_COLORS[w.status]} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeWorkout(i)} style={styles.removeButton}>
-                      <MaterialIcons name="delete" size={22} color="#fff" />
+                    <TouchableOpacity onPress={() => removeWorkout(i)}>
+                      <MaterialIcons name="delete" size={24} color="#ff5f6d" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
-              <TouchableOpacity onPress={handleAddWorkout} style={styles.addButton}>
+              <TouchableOpacity style={styles.addButtonSheet} onPress={handleAddWorkout}>
                 <Text style={styles.addButtonText}>Add Workout</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
-        <Modal visible={showAddModal} transparent>
+        <Modal
+          visible={showAddModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowAddModal(false)}
+        >
           <View style={styles.modalOverlay}>
-            <View style={[styles.addModalInner, { width: SCREEN_WIDTH * 0.9 }]}>
+            <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Workout</Text>
-                <TouchableOpacity
-                  style={styles.modalCloseIcon}
-                  onPress={() => setShowAddModal(false)}
-                >
+                <Text style={styles.sheetTitle}>Add Workout</Text>
+                <TouchableOpacity onPress={() => setShowAddModal(false)}>
                   <MaterialIcons name="close" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -336,7 +366,7 @@ export default function RoutineCalendarScreen() {
                 value={newWorkoutName}
                 onChangeText={setNewWorkoutName}
               />
-              <ScrollView style={styles.workoutsList} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ maxHeight: 300 }}>
                 {allSavedWorkouts.map(w => (
                   <TouchableOpacity
                     key={w.id}
@@ -346,10 +376,7 @@ export default function RoutineCalendarScreen() {
                       setShowAddModal(false);
                     }}
                   >
-                    <View style={styles.workoutItemContent}>
-                      <MaterialIcons name="fitness-center" size={24} color="#fff" />
-                      <Text style={styles.workoutItemText}>{w.name}</Text>
-                    </View>
+                    <Text style={styles.workoutItemLabel}>{w.name}</Text>
                     <MaterialIcons name="add-circle" size={24} color="#3498db" />
                   </TouchableOpacity>
                 ))}
@@ -370,33 +397,56 @@ export default function RoutineCalendarScreen() {
             </View>
           </View>
         </Modal>
-        <Modal visible={showRoutineModal} transparent>
+        <Modal
+          visible={showRoutineModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowRoutineModal(false)}
+        >
           <View style={styles.modalOverlay}>
-            <View style={styles.addModalInner}>
-              <Text style={styles.modalTitle}>Apply Routine</Text>
-              <Text style={styles.modalText}>
-                This will fill your calendar for the next {DAYS_TO_FILL} days
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.sheetTitle}>Routine Management</Text>
+                <TouchableOpacity onPress={() => setShowRoutineModal(false)}>
+                  <MaterialIcons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.clearButton]}
+                onPress={async () => {
+                  await clearFutureWorkouts();
+                  setShowRoutineModal(false);
+                }}
+              >
+                <MaterialIcons name="clear-all" size={24} color="#fff" />
+                <Text style={styles.actionButtonText}>Clear Future Workouts</Text>
+              </TouchableOpacity>
+              <Text style={[styles.sheetSubtitle, { marginTop: SPACING.md }]}>
+                Switch to a Different Routine
               </Text>
-              <ScrollView style={{ maxHeight: 300 }}>
+              <Text style={styles.sheetSubtext}>
+                This will clear future scheduled workouts and apply the new routine
+              </Text>
+              <ScrollView style={{ maxHeight: 300, marginTop: SPACING.sm }}>
                 {savedRoutines.map((routine, index) => (
                   <TouchableOpacity
                     key={index}
-                    style={styles.chooseButton}
-                    onPress={() => applyRoutine(routine)}
+                    style={styles.routineButton}
+                    onPress={() => {
+                      switchRoutine(routine);
+                      setShowRoutineModal(false);
+                    }}
                   >
-                    <Text style={styles.chooseButtonText}>{routine.name}</Text>
-                    <Text style={styles.legendText}>
-                      {routine.type === 'fixedDays' ? 'Weekly Schedule' : 'Cycle'}
-                    </Text>
+                    <View style={styles.routineInfo}>
+                      <Text style={styles.routineName}>{routine.name}</Text>
+                      <Text style={styles.routineType}>
+                        {routine.type === 'fixedDays' ? 'Weekly Schedule' : 'Cycle'}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="swap-horiz" size={24} color="#3498db" />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowRoutineModal(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Cancel</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -411,55 +461,129 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    marginBottom: 10,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    marginBottom: SPACING.md,
     justifyContent: 'space-between'
   },
-  headerBackButton: { padding: 10 },
-  headerTitle: { fontSize: 26, color: '#fff', fontWeight: 'bold' },
-  calendar: { borderRadius: 10, marginHorizontal: 10, marginBottom: 20 },
-  legendContainer: { paddingHorizontal: 20, marginBottom: 10 },
-  legendTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  legendScroll: { marginBottom: 10 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', marginRight: 20 },
-  legendColorBox: { width: 16, height: 16, marginRight: 5, borderRadius: 4 },
-  legendText: { color: '#fff', fontSize: 14 },
-  legendStatusRow: { flexDirection: 'row', alignItems: 'center' },
-  legendStatusBox: { width: 16, height: 16, borderRadius: 4 },
-  legendStatusText: { color: '#fff', fontSize: 14, marginLeft: 5 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-  addModalInner: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: SCREEN_WIDTH * 1.1,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84
+  headerBackButton: {
+    padding: SPACING.xs
+  },
+  headerTitle: {
+    fontSize: 26,
+    color: '#fff',
+    fontWeight: 'bold'
+  },
+  calendar: {
+    borderRadius: 10,
+    marginHorizontal: SPACING.sm,
+    marginBottom: SPACING.md
+  },
+  legendContainer: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm
+  },
+  legendTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: SPACING.xs
+  },
+  legendScroll: {
+    marginBottom: SPACING.xs
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.md
+  },
+  legendColorBox: {
+    width: 16,
+    height: 16,
+    marginRight: SPACING.xs,
+    borderRadius: 4
+  },
+  legendText: {
+    color: '#fff',
+    fontSize: 14
+  },
+  legendStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  legendStatusText: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: SPACING.xs
+  },
+  sheetTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold'
+  },
+  sheetSubtitle: {
+    color: '#ccc',
+    fontSize: 14,
+    marginBottom: SPACING.md
+  },
+  sheetSubtext: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 2
+  },
+  workoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm
+  },
+  workoutText: {
+    color: '#fff',
+    flex: 1,
+    fontSize: 16
+  },
+  statusIcon: {
+    marginRight: SPACING.sm
+  },
+  addButtonSheet: {
+    backgroundColor: '#3498db',
+    borderRadius: 12,
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginTop: SPACING.md
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end'
+  },
+  modalContent: {
+    backgroundColor: '#24243e',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: SPACING.md,
+    maxHeight: '80%'
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-    paddingBottom: 15
+    borderBottomColor: 'rgba(255,255,255,0.1)'
   },
-  modalCloseIcon: { padding: 5 },
-  modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', textAlign: 'center' },
-  modalText: { color: '#fff', fontSize: 16, marginBottom: 15, textAlign: 'center' },
-  workoutsList: { maxHeight: SCREEN_WIDTH * 0.7 },
   addInput: {
     backgroundColor: '#3A3A3A',
     color: '#fff',
     borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
     fontSize: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)'
@@ -468,55 +592,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
+    padding: SPACING.sm,
     backgroundColor: '#3A3A3A',
     borderRadius: 12,
-    marginBottom: 10
+    marginBottom: SPACING.xs
   },
-  workoutItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center'
+  workoutItemLabel: {
+    color: '#fff',
+    fontSize: 16,
+    marginRight: SPACING.sm
   },
-  workoutItemText: { color: '#fff', fontSize: 16, marginLeft: 15, fontWeight: '500' },
   createWorkoutButton: {
     backgroundColor: '#3498db',
     borderRadius: 12,
-    padding: 15,
+    padding: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10
+    marginTop: SPACING.sm
   },
-  createWorkoutButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
+  createWorkoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: SPACING.xs
+  },
   chooseButton: {
     backgroundColor: '#FF5F6D',
     borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
     alignItems: 'center',
-    marginBottom: 8
+    marginBottom: SPACING.xs
   },
-  chooseButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  modalCloseButton: {
-    backgroundColor: '#ff5f6d',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignSelf: 'center',
-    marginTop: 10
+  chooseButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16
   },
-  modalCloseButtonText: { color: '#fff', fontWeight: 'bold' },
-  workoutRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  workoutText: { color: '#fff', flex: 1, fontSize: 16 },
-  statusButton: { backgroundColor: '#555', borderRadius: 8, padding: 8, marginRight: 8 },
-  statusButtonText: { color: '#fff' },
-  removeButton: { backgroundColor: '#ff5f6d', borderRadius: 8, padding: 8 },
-  addButton: {
-    backgroundColor: '#3498db',
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
     borderRadius: 12,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 10
+    marginTop: SPACING.sm
   },
-  addButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  clearButton: {
+    backgroundColor: '#e74c3c'
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: SPACING.sm
+  },
+  routineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
+    backgroundColor: '#3A3A3A',
+    borderRadius: 12,
+    marginBottom: SPACING.xs
+  },
+  routineInfo: {
+    flex: 1
+  },
+  routineName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  routineType: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 2
+  }
 });
