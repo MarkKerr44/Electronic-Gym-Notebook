@@ -14,6 +14,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
+import { useNotificationService } from './services/NotificationService';
 
 interface Exercise {
   id: string;
@@ -58,6 +59,86 @@ export default function StartWorkoutScreen() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [actualReps, setActualReps] = useState<string>('');
   const pendingActionRef = useRef<'SAME_EXERCISE' | 'NEXT_EXERCISE' | null>(null);
+  const notificationService = useNotificationService();
+
+  const getPreviousBest = async (exerciseId: string): Promise<number> => {
+    try {
+      const logs = await AsyncStorage.getItem('workoutLogs');
+      if (!logs) return 0;
+
+      const parsedLogs: WorkoutLog[] = JSON.parse(logs);
+      let maxReps = 0;
+
+      parsedLogs.forEach(workoutLog => {
+        workoutLog.exercises.forEach(exercise => {
+          if (exercise.exerciseId === exerciseId) {
+            exercise.sets.forEach(set => {
+              if (set.actualReps > maxReps) {
+                maxReps = set.actualReps;
+              }
+            });
+          }
+        });
+      });
+
+      return maxReps;
+    } catch (error) {
+      console.error('Error getting previous best:', error);
+      return 0;
+    }
+  };
+
+  const getLastWorkoutOfType = async (workoutId: string): Promise<WorkoutLog | null> => {
+    try {
+      const logs = await AsyncStorage.getItem('workoutLogs');
+      if (!logs) return null;
+
+      const parsedLogs: WorkoutLog[] = JSON.parse(logs);
+      const lastWorkout = [...parsedLogs]
+        .reverse()
+        .find(log => log.workoutId.split('-')[0] === workoutId);
+
+      return lastWorkout || null;
+    } catch (error) {
+      console.error('Error getting last workout:', error);
+      return null;
+    }
+  };
+
+  const calculateImprovement = (
+    currentExercises: ExerciseLog[],
+    previousExercises: ExerciseLog[]
+  ): number => {
+    let totalImprovement = 0;
+    let exerciseCount = 0;
+
+    currentExercises.forEach(currentExercise => {
+      const previousExercise = previousExercises.find(
+        e => e.exerciseId === currentExercise.exerciseId
+      );
+
+      if (previousExercise) {
+        const currentAvgReps = currentExercise.sets.reduce(
+          (sum, set) => sum + set.actualReps, 
+          0
+        ) / currentExercise.sets.length;
+
+        const previousAvgReps = previousExercise.sets.reduce(
+          (sum, set) => sum + set.actualReps, 
+          0
+        ) / previousExercise.sets.length;
+
+        if (previousAvgReps > 0) {
+          const exerciseImprovement = 
+            ((currentAvgReps - previousAvgReps) / previousAvgReps) * 100;
+          totalImprovement += exerciseImprovement;
+          exerciseCount++;
+        }
+      }
+    });
+
+    return exerciseCount > 0 ? totalImprovement / exerciseCount : 0;
+  };
 
   useEffect(() => {
     loadWorkout();
@@ -160,6 +241,29 @@ export default function StartWorkoutScreen() {
   const saveWorkoutLog = async () => {
     if (!workout) return;
     try {
+      for (const exercise of exerciseLogs) {
+        const previousBest = await getPreviousBest(exercise.exerciseId);
+        const currentBest = Math.max(...exercise.sets.map(s => s.actualReps));
+        
+        if (currentBest > previousBest) {
+          notificationService.notifyPersonalBest(
+            exercise.exerciseName,
+            `${currentBest} reps`
+          );
+        }
+      }
+
+      const lastWorkout = await getLastWorkoutOfType(workout.id);
+      if (lastWorkout) {
+        const improvement = calculateImprovement(exerciseLogs, lastWorkout.exercises);
+        if (improvement > 10) {
+          notificationService.notifyProgressMilestone(
+            workout.name,
+            `${Math.round(improvement)}%`
+          );
+        }
+      }
+
       const existingLogs = await AsyncStorage.getItem('workoutLogs');
       const logs = existingLogs ? JSON.parse(existingLogs) : [];
       const workoutLogId = `${workout.id}-${new Date().getTime()}`;
@@ -174,7 +278,9 @@ export default function StartWorkoutScreen() {
       await updateCalendarWithCompletedWorkout(workoutLog);
       Alert.alert('Workout completed', 'Your workout has been logged.');
       navigation.navigate('DashboardScreen');
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error saving workout log:', error);
+    }
   };
 
   const updateCalendarWithCompletedWorkout = async (workoutLog: WorkoutLog) => {

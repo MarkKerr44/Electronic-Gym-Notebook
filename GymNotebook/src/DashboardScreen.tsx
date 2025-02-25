@@ -18,6 +18,7 @@ import BottomNavBar from '../components/BottomNavBar';
 import NotificationPanel from '../components/NotificationPanel';
 import { ThemeContext } from '../context/ThemeProvider';
 import { getThemeColors } from '../context/themeHelpers';
+import { useNotifications } from '../context/NotificationContext';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,7 +29,7 @@ function DashboardScreen() {
   const { gradient, textColor, boxBackground, accent } = getThemeColors(theme);
   const [index, setIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [notifications, setNotifications] = useState([]);
+  const { notifications, unreadCount } = useNotifications();
   const [isNotificationPanelVisible, setNotificationPanelVisible] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [routine, setRoutine] = useState([]);
@@ -41,14 +42,8 @@ function DashboardScreen() {
       useNativeDriver: true,
     }).start();
     setShowOnboarding(true);
-    loadNotifications();
     loadRoutine();
   }, []);
-
-  async function loadNotifications() {
-    const data = [];
-    setNotifications(data);
-  }
 
   async function loadRoutine() {
     try {
@@ -91,8 +86,6 @@ function DashboardScreen() {
   function handleNotificationPress() {
     setNotificationPanelVisible(true);
   }
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   function renderRoutineDay(dayIndex) {
     if (routine.length === 7 && routine[dayIndex]) {
@@ -156,7 +149,7 @@ function DashboardScreen() {
           </Animated.View>
         </ScrollView>
         <Modal visible={isNotificationPanelVisible} transparent animationType="slide">
-          <NotificationPanel notifications={notifications} setNotifications={setNotifications} onClose={() => setNotificationPanelVisible(false)} />
+          <NotificationPanel onClose={() => setNotificationPanelVisible(false)} />
         </Modal>
         <Modal visible={showOnboarding} transparent animationType="slide">
           <View style={styles.modalOverlay}>

@@ -24,12 +24,15 @@ import { WorkoutDetailsScreen } from './WorkoutDetails';
 import AppearanceScreen from './AppearanceScreen';
 import AccountScreen from './AccountScreen';
 import RoutineCalendarScreen from './RoutineCalendarScreen';
+import { NotificationProvider } from '../context/NotificationContext';
 
 const Stack = createNativeStackNavigator();
 
 function App() {
   return (
+    
     <GestureHandlerRootView style={{ flex: 1 }} testID="app-root">
+      <NotificationProvider>
       <ThemeProvider>
         <NavigationContainer>
           <Stack.Navigator
@@ -141,6 +144,7 @@ function App() {
           </Stack.Navigator>
         </NavigationContainer>
       </ThemeProvider>
+      </NotificationProvider>
     </GestureHandlerRootView>
   );
 }

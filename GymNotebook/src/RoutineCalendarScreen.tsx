@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNotificationService } from './services/NotificationService';
 
 type RootStackParamList = {
   RoutineCalendarScreen: { routineToApply?: Routine } | undefined;
@@ -69,9 +70,11 @@ export default function RoutineCalendarScreen() {
   const [showDayModal, setShowDayModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRoutineModal, setShowRoutineModal] = useState(false);
+  const notificationService = useNotificationService();
 
   useEffect(() => {
     loadData();
+    checkWeeklyCompletion();
   }, []);
 
   useEffect(() => {
@@ -99,6 +102,8 @@ export default function RoutineCalendarScreen() {
       setSavedRoutines(JSON.parse(dataRoutines));
     }
   }
+
+
 
   async function applyRoutine(routine: Routine) {
     const today = new Date();
@@ -171,6 +176,25 @@ export default function RoutineCalendarScreen() {
     }
     return finalMarked;
   }
+
+  const checkWeeklyCompletion = () => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    
+    const scheduledCount = Object.entries(allWorkouts)
+      .filter(([date]) => new Date(date) >= startOfWeek)
+      .reduce((acc, [_, workouts]) => acc + workouts.length, 0);
+      
+    const completedCount = Object.entries(allWorkouts)
+      .filter(([date]) => new Date(date) >= startOfWeek)
+      .reduce((acc, [_, workouts]) => 
+        acc + workouts.filter(w => w.status === 'completed').length, 0);
+
+    if (scheduledCount > 0 && scheduledCount === completedCount) {
+      notificationService.notifyWeeklyStreak(1); 
+    }
+  };
 
   function formatDate(date: Date) {
     const y = date.getFullYear();

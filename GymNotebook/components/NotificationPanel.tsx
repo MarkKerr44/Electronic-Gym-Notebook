@@ -10,31 +10,28 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNotifications } from '../context/NotificationContext';
 
 interface Notification {
   id: string;
   title: string;
   message: string;
+  type: 'achievement' | 'reminder' | 'progress' | 'streak';
   read: boolean;
-  timestamp: Date;
+  date: string;
+  data?: any;
 }
 
 interface NotificationPanelProps {
-  notifications: Notification[];
-  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
   onClose: () => void;
 }
 
-const NotificationPanel: React.FC<NotificationPanelProps> = ({
-  notifications,
-  setNotifications,
-  onClose,
-}) => {
+const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
+  const { notifications, markAsRead, clearNotifications } = useNotifications();
   const panelHeight = Dimensions.get('window').height * 0.8;
 
   React.useEffect(() => {
-    const updatedNotifications = notifications.map((n) => ({ ...n, read: true }));
-    setNotifications(updatedNotifications);
+    notifications.forEach(n => !n.read && markAsRead(n.id));
   }, []);
 
   const getTimeAgo = (timestamp: Date) => {
@@ -63,15 +60,41 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
     return `${years} year${years !== 1 ? 's' : ''} ago`;
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'achievement': return 'emoji-events';
+      case 'reminder': return 'alarm';
+      case 'progress': return 'trending-up';
+      case 'streak': return 'local-fire-department';
+      default: return 'notifications';
+    }
+  };
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'achievement': return '#FFD700';
+      case 'reminder': return '#3498db';
+      case 'progress': return '#2ecc71';
+      case 'streak': return '#e74c3c';
+      default: return '#FF5F6D';
+    }
+  };
+
   const renderItem = ({ item }: { item: Notification }) => (
     <View style={styles.notificationItem}>
       <View style={styles.notificationIcon}>
-        <MaterialIcons name="notifications" size={24} color="#FF5F6D" />
+        <MaterialIcons 
+          name={getNotificationIcon(item.type)} 
+          size={24} 
+          color={getNotificationColor(item.type)} 
+        />
       </View>
       <View style={styles.notificationText}>
         <Text style={styles.notificationTitle}>{item.title}</Text>
         <Text style={styles.notificationMessage}>{item.message}</Text>
-        <Text style={styles.notificationTime}>{getTimeAgo(item.timestamp)}</Text>
+        <Text style={styles.notificationTime}>
+          {getTimeAgo(new Date(item.date))}
+        </Text>
       </View>
     </View>
   );
@@ -84,17 +107,32 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity onPress={onClose}>
-            <MaterialIcons name="close" size={28} color="#ffffff" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              onPress={clearNotifications}
+              style={styles.clearButton}
+            >
+              <MaterialIcons name="delete-sweep" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialIcons name="close" size={28} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <FlatList
-          data={notifications}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-        />
+        {notifications.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="notifications-none" size={48} color="#ffffff80" />
+            <Text style={styles.emptyStateText}>No notifications yet</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={notifications}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
       </LinearGradient>
     </Animated.View>
   );
@@ -124,6 +162,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearButton: {
+    marginRight: 10,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -157,6 +202,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#aaaaaa',
     marginTop: 5,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 18,
+    color: '#ffffff80',
+    marginTop: 10,
   },
 });
 
