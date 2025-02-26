@@ -95,6 +95,10 @@ const WorkoutSelectionScreen: React.FC = () => {
     navigation.navigate('WorkoutHistoryScreen');
   };
 
+  const handleExerciseStats = () => {
+    navigation.navigate('ExerciseStatsScreen');
+  };
+
   const handleSelectPremadeWorkout = (workout: PremadeWorkout) => {
   };
 
@@ -157,6 +161,14 @@ const WorkoutSelectionScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
             />
           </Animated.View>
+
+          <TouchableOpacity
+            style={[styles.statsButton, { backgroundColor: highlightSolid }]}
+            onPress={handleExerciseStats}
+          >
+            <MaterialIcons name="analytics" size={24} color={textColor} style={styles.buttonIcon} />
+            <Text style={[styles.statsButtonText, { color: textColor }]}>Exercise Stats</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.historyButton, { backgroundColor: highlightSolid }]}
@@ -272,6 +284,19 @@ const styles = StyleSheet.create({
   premadeWorkoutDescription: {
     fontSize: 14,
     marginTop: 5,
+  },
+  statsButton: {
+    marginHorizontal: 20,
+    marginTop: 30,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  statsButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   historyButton: {
     marginHorizontal: 20,

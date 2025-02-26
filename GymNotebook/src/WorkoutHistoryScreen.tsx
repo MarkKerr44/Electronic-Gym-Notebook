@@ -116,7 +116,13 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
     });
 
     return (
-      <View style={styles.exerciseDetail}>
+      <TouchableOpacity 
+        style={styles.exerciseDetail}
+        onPress={() => navigation.navigate('ExerciseAnalytics', {
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName
+        })}
+      >
         <Text style={styles.exerciseTitle}>{exercise.exerciseName}</Text>
         <Text style={styles.exerciseSets}>Sets: {exercise.sets.length}</Text>
         <Text style={styles.exerciseStats}>Max Weight: {maxWeight}kg</Text>
@@ -131,7 +137,13 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
             </View>
           ))}
         </View>
-      </View>
+        <MaterialIcons 
+          name="analytics" 
+          size={20} 
+          color="#FFC371" 
+          style={styles.analyticsIcon} 
+        />
+      </TouchableOpacity>
     );
   };
 
@@ -329,6 +341,10 @@ const styles = StyleSheet.create({
   setText: {
     fontSize: 14,
     color: '#DDD',
+  },
+  analyticsIcon: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
   },
 });
 
