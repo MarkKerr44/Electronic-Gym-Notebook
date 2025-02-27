@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNotificationService } from './services/NotificationService';
+import { workoutService } from './services/workoutService';
 
 interface Exercise {
   id: string;
@@ -73,15 +74,12 @@ export default function StartWorkoutScreen() {
 
   const getPreviousBest = async (exerciseId: string): Promise<{ weight: number, reps: number }> => {
     try {
-      const logs = await AsyncStorage.getItem('workoutLogs');
-      if (!logs) return { weight: 0, reps: 0 };
-
-      const parsedLogs: WorkoutLog[] = JSON.parse(logs);
+      const logs = await workoutService.getWorkoutLogs(exerciseId);
       let maxWeight = 0;
       let repsAtMaxWeight = 0;
 
-      parsedLogs.forEach(workoutLog => {
-        workoutLog.exercises.forEach(exercise => {
+      logs.forEach(log => {
+        log.exercises.forEach(exercise => {
           if (exercise.exerciseId === exerciseId) {
             exercise.sets.forEach(set => {
               if (set.weight > maxWeight) {
@@ -114,15 +112,8 @@ export default function StartWorkoutScreen() {
 
   const getLastWorkoutOfType = async (workoutId: string): Promise<WorkoutLog | null> => {
     try {
-      const logs = await AsyncStorage.getItem('workoutLogs');
-      if (!logs) return null;
-
-      const parsedLogs: WorkoutLog[] = JSON.parse(logs);
-      const lastWorkout = [...parsedLogs]
-        .reverse()
-        .find(log => log.workoutId.split('-')[0] === workoutId);
-
-      return lastWorkout || null;
+      const logs = await workoutService.getWorkoutLogs();
+      return logs.find(log => log.workoutId.split('-')[0] === workoutId) || null;
     } catch (error) {
       console.error('Error getting last workout:', error);
       return null;
@@ -173,16 +164,18 @@ export default function StartWorkoutScreen() {
 
   const loadWorkout = async () => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      const parsedWorkouts: Workout[] = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      const foundWorkout = parsedWorkouts.find(w => w.id === workoutId);
+      const foundWorkout = await workoutService.getWorkoutById(workoutId);
       if (foundWorkout) {
         setWorkout(foundWorkout);
       } else {
-        Alert.alert('Workout not found');
+        Alert.alert('Error', 'Workout not found');
         navigation.goBack();
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error loading workout:', error);
+      Alert.alert('Error', 'Failed to load workout');
+      navigation.goBack();
+    }
   };
 
 const handleCompleteSet = () => {
@@ -283,23 +276,31 @@ const handleCompleteSet = () => {
   const saveWorkoutLog = async () => {
     if (!workout) return;
     try {
-      for (const exercise of exerciseLogs) {
-        await checkForPersonalBest(exercise);
-      }
-
-      const lastWorkout = await getLastWorkoutOfType(workout.id);
-      if (lastWorkout) {
-        const improvement = calculateImprovement(exerciseLogs, lastWorkout.exercises);
-        if (improvement > 10) {
-          notificationService.notifyProgressMilestone(
-            workout.name,
-            `${Math.round(improvement)}%`
+      try {
+        for (const exercise of exerciseLogs) {
+          await checkForPersonalBest(exercise).catch(err => 
+            console.warn('Error checking personal best:', err)
           );
         }
+      } catch (error) {
+        console.warn('Error in personal best check:', error);
       }
 
-      const existingLogs = await AsyncStorage.getItem('workoutLogs');
-      const logs = existingLogs ? JSON.parse(existingLogs) : [];
+      try {
+        const lastWorkout = await getLastWorkoutOfType(workout.id);
+        if (lastWorkout) {
+          const improvement = calculateImprovement(exerciseLogs, lastWorkout.exercises);
+          if (improvement > 10) {
+            notificationService.notifyProgressMilestone(
+              workout.name,
+              `${Math.round(improvement)}%`
+            );
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking improvement:', error);
+      }
+
       const workoutLogId = `${workout.id}-${new Date().getTime()}`;
       const workoutLog: WorkoutLog = {
         workoutId: workoutLogId,
@@ -307,29 +308,25 @@ const handleCompleteSet = () => {
         date: new Date().toISOString(),
         exercises: exerciseLogs
       };
-      logs.push(workoutLog);
-      await AsyncStorage.setItem('workoutLogs', JSON.stringify(logs));
-      await updateCalendarWithCompletedWorkout(workoutLog);
+
+      await workoutService.saveWorkoutLog(workoutLog);
+
+      const dateStr = formatDate(new Date(workoutLog.date));
+      await workoutService.updateCalendarWorkout(dateStr, {
+        name: workoutLog.workoutName,
+        status: 'completed',
+        workoutLogId: workoutLog.workoutId
+      });
+
       Alert.alert('Workout completed', 'Your workout has been logged.');
       navigation.navigate('DashboardScreen');
     } catch (error) {
       console.error('Error saving workout log:', error);
+      Alert.alert(
+        'Error',
+        'There was an issue saving your workout. Please try again or check your connection.'
+      );
     }
-  };
-
-  const updateCalendarWithCompletedWorkout = async (workoutLog: WorkoutLog) => {
-    const dateStr = formatDate(new Date(workoutLog.date));
-    const calendarWorkouts = await AsyncStorage.getItem('allCalendarWorkouts');
-    const parsedCalendar = calendarWorkouts ? JSON.parse(calendarWorkouts) : {};
-    if (!parsedCalendar[dateStr]) {
-      parsedCalendar[dateStr] = [];
-    }
-    parsedCalendar[dateStr].push({
-      name: workoutLog.workoutName,
-      status: 'completed',
-      workoutLogId: workoutLog.workoutId
-    });
-    await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(parsedCalendar));
   };
 
   const calculateSuggestedWeight = () => {
