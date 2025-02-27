@@ -9,13 +9,14 @@ import {
   Alert,
   ScrollView,
   Switch,
-  Modal
+  Modal,
+  ActivityIndicator
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { userService } from './services/userService';
 
 export default function UserProfileScreen() {
   const navigation = useNavigation();
@@ -26,6 +27,7 @@ export default function UserProfileScreen() {
   const [isMetric, setIsMetric] = useState(true);
   const [showBMI, setShowBMI] = useState(false);
   const [sexModalVisible, setSexModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadProfile();
@@ -33,16 +35,21 @@ export default function UserProfileScreen() {
 
   async function loadProfile() {
     try {
-      const data = await AsyncStorage.getItem('userProfile');
-      if (data) {
-        const parsed = JSON.parse(data);
-        setAge(parsed.age || '');
-        setSex(parsed.sex || '');
-        setWeight(parsed.weight || '');
-        setHeight(parsed.height || '');
-        setIsMetric(parsed.isMetric !== undefined ? parsed.isMetric : true);
+      setIsLoading(true);
+      const profile = await userService.getUserProfile();
+      if (profile) {
+        setAge(profile.age);
+        setSex(profile.sex);
+        setWeight(profile.weight);
+        setHeight(profile.height);
+        setIsMetric(profile.isMetric);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      Alert.alert('Error', 'Failed to load profile');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function validateForm() {
@@ -67,14 +74,19 @@ export default function UserProfileScreen() {
 
   async function handleSaveProfile() {
     if (!validateForm()) return;
+    
     try {
-      await AsyncStorage.setItem(
-        'userProfile',
-        JSON.stringify({ age, sex, weight, height, isMetric })
-      );
-      Alert.alert('Saved', 'Your profile has been saved.');
+      await userService.saveUserProfile({
+        age,
+        sex,
+        weight,
+        height,
+        isMetric
+      });
+      Alert.alert('Success', 'Your profile has been saved');
     } catch (error) {
-      Alert.alert('Error', 'Failed to save profile.');
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile');
     }
   }
 
@@ -118,72 +130,79 @@ export default function UserProfileScreen() {
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>User Profile</Text>
-            <View style={{ width: 24 }} />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Age</Text>
-              <TextInput
-                style={styles.input}
-                value={age}
-                onChangeText={setAge}
-                placeholder="Enter age"
-                placeholderTextColor="#999"
-                keyboardType="number-pad"
-              />
+        ) : (
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackButton}>
+                <Ionicons name="arrow-back" size={24} color="#ffffff" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>User Profile</Text>
+              <View style={{ width: 24 }} />
             </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Sex (assigned at birth)</Text>
-              <TouchableOpacity style={styles.input} onPress={() => setSexModalVisible(true)}>
-                <Text style={[styles.inputText, { color: sex ? '#ffffff' : '#999' }]}>
-                  {sex ? (sex === 'male' ? 'Male' : 'Female') : 'Select sex'}
-                </Text>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Personal Information</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Age</Text>
+                <TextInput
+                  style={styles.input}
+                  value={age}
+                  onChangeText={setAge}
+                  placeholder="Enter age"
+                  placeholderTextColor="#999"
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Sex (assigned at birth)</Text>
+                <TouchableOpacity style={styles.input} onPress={() => setSexModalVisible(true)}>
+                  <Text style={[styles.inputText, { color: sex ? '#ffffff' : '#999' }]}>
+                    {sex ? (sex === 'male' ? 'Male' : 'Female') : 'Select sex'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Body Measurements</Text>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>Use Metric Units</Text>
+                <Switch value={isMetric} onValueChange={handleToggleUnits} />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>{isMetric ? 'Weight (kg)' : 'Weight (lbs)'}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={weight}
+                  onChangeText={setWeight}
+                  placeholder={`Enter weight in ${isMetric ? 'kg' : 'lbs'}`}
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>{isMetric ? 'Height (cm)' : 'Height (in)'}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={height}
+                  onChangeText={setHeight}
+                  placeholder={`Enter height in ${isMetric ? 'cm' : 'inches'}`}
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+              </View>
+              <TouchableOpacity onPress={() => setShowBMI(!showBMI)} style={styles.bmiBox}>
+                <Text style={styles.bmiText}>{showBMI ? `BMI: ${calculateBMI()}` : 'Show BMI'}</Text>
               </TouchableOpacity>
             </View>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Body Measurements</Text>
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Use Metric Units</Text>
-              <Switch value={isMetric} onValueChange={handleToggleUnits} />
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{isMetric ? 'Weight (kg)' : 'Weight (lbs)'}</Text>
-              <TextInput
-                style={styles.input}
-                value={weight}
-                onChangeText={setWeight}
-                placeholder={`Enter weight in ${isMetric ? 'kg' : 'lbs'}`}
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{isMetric ? 'Height (cm)' : 'Height (in)'}</Text>
-              <TextInput
-                style={styles.input}
-                value={height}
-                onChangeText={setHeight}
-                placeholder={`Enter height in ${isMetric ? 'cm' : 'inches'}`}
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-            <TouchableOpacity onPress={() => setShowBMI(!showBMI)} style={styles.bmiBox}>
-              <Text style={styles.bmiText}>{showBMI ? `BMI: ${calculateBMI()}` : 'Show BMI'}</Text>
+            <TouchableOpacity onPress={handleSaveProfile} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
-          </View>
-          <TouchableOpacity onPress={handleSaveProfile} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        )}
       </SafeAreaView>
       <Modal transparent visible={sexModalVisible} animationType="slide">
         <View style={styles.modalOverlay}>
@@ -286,5 +305,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonModalText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 10,
+  },
 });
 
