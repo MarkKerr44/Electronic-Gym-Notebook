@@ -6,76 +6,35 @@ import {
   SafeAreaView,
   FlatList,
   TouchableOpacity,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
-interface ExerciseSummary {
-  exerciseId: string;
-  exerciseName: string;
-  lastWeight: number;
-  bestWeight: number;
-  lastVolume: number;
-}
+import { workoutService } from './services/workoutService';
+import type { ExerciseSummary } from './services/workoutService';
 
 export default function ExerciseStatsScreen() {
   const [exercises, setExercises] = useState<ExerciseSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation();
+
+  const loadExercises = async () => {
+    try {
+      setIsLoading(true);
+      const exerciseStats = await workoutService.getExerciseStats();
+      setExercises(exerciseStats);
+    } catch (error) {
+      console.error('Error loading exercises:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadExercises();
   }, []);
-
-  const loadExercises = async () => {
-    try {
-      const logs = await AsyncStorage.getItem('workoutLogs');
-      if (logs) {
-        const allLogs = JSON.parse(logs);
-        const exerciseMap = new Map<string, ExerciseSummary>();
-
-        allLogs.forEach(log => {
-          log.exercises.forEach(exercise => {
-            if (!exercise.sets || exercise.sets.length === 0) return;
-
-            const validWeights = exercise.sets
-              .map(s => s.weight || 0)
-              .filter(w => !isNaN(w));
-
-            if (validWeights.length > 0) {
-              const maxWeight = Math.max(...validWeights);
-              const totalVolume = exercise.sets.reduce((sum, set) => 
-                sum + ((set.weight || 0) * (set.actualReps || 0)), 0);
-
-              if (!exerciseMap.has(exercise.exerciseId)) {
-                exerciseMap.set(exercise.exerciseId, {
-                  exerciseId: exercise.exerciseId,
-                  exerciseName: exercise.exerciseName,
-                  lastWeight: maxWeight,
-                  bestWeight: maxWeight,
-                  lastVolume: totalVolume
-                });
-              } else {
-                const existing = exerciseMap.get(exercise.exerciseId)!;
-                exerciseMap.set(exercise.exerciseId, {
-                  ...existing,
-                  lastWeight: maxWeight,
-                  bestWeight: Math.max(existing.bestWeight, maxWeight),
-                  lastVolume: totalVolume
-                });
-              }
-            }
-          });
-        });
-
-        setExercises(Array.from(exerciseMap.values()));
-      }
-    } catch (error) {
-      console.error('Error loading exercises:', error);
-    }
-  };
 
   const renderExerciseItem = ({ item }: { item: ExerciseSummary }) => (
     <TouchableOpacity
@@ -104,7 +63,12 @@ export default function ExerciseStatsScreen() {
           <Text style={styles.headerTitle}>Exercise Stats</Text>
         </View>
 
-        {exercises.length > 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading exercise stats...</Text>
+          </View>
+        ) : exercises.length > 0 ? (
           <FlatList
             data={exercises}
             renderItem={renderExerciseItem}
@@ -177,5 +141,15 @@ const styles = StyleSheet.create({
   noDataText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFC371',
+    fontSize: 16,
+    marginTop: 10,
   },
 });

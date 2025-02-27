@@ -17,6 +17,22 @@ export interface Workout {
   userId: string;
 }
 
+export interface ExerciseSummary {
+  exerciseId: string;
+  exerciseName: string;
+  lastWeight: number;
+  bestWeight: number;
+  lastVolume: number;
+  lastDate?: string;
+}
+
+export interface ExerciseData {
+  date: string;
+  maxWeight: number;
+  totalVolume: number;
+  totalReps: number;
+}
+
 export const workoutService = {
   async saveWorkout(workout: Omit<Workout, 'id' | 'createdAt' | 'userId'>) {
     try {
@@ -126,12 +142,11 @@ export const workoutService = {
 
       let q;
       if (exerciseId) {
-        // Simple query while waiting for index
         q = query(
           collection(db, 'workoutLogs'),
           where('userId', '==', userId),
           orderBy('date', 'desc'),
-          limit(50) // Limit results to prevent performance issues
+          limit(50) 
         );
       } else {
         q = query(
@@ -147,7 +162,6 @@ export const workoutService = {
         ...doc.data()
       }));
 
-      // If exerciseId is provided, filter in memory
       if (exerciseId) {
         return logs.filter(log => 
           log.exercises?.some(ex => ex.exerciseId === exerciseId)
@@ -157,7 +171,6 @@ export const workoutService = {
       return logs;
     } catch (error) {
       console.error('Error getting workout logs:', error);
-      // Return empty array instead of throwing
       return [];
     }
   },
@@ -186,7 +199,6 @@ export const workoutService = {
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error('User not authenticated');
 
-      // Get all workout logs for the user
       const q = query(
         collection(db, 'workoutLogs'),
         where('userId', '==', userId)
@@ -194,7 +206,6 @@ export const workoutService = {
       
       const snapshot = await getDocs(q);
       
-      // Delete each document in batches of 500
       const batch = writeBatch(db);
       let operationCount = 0;
       
@@ -202,19 +213,16 @@ export const workoutService = {
         batch.delete(doc.ref);
         operationCount++;
         
-        // Commit batch when it reaches 500 operations
         if (operationCount === 500) {
           await batch.commit();
           operationCount = 0;
         }
       }
       
-      // Commit any remaining operations
       if (operationCount > 0) {
         await batch.commit();
       }
 
-      // Also clear calendar entries
       const calendarQ = query(
         collection(db, 'calendar'),
         where('userId', '==', userId)
@@ -239,6 +247,117 @@ export const workoutService = {
       }
     } catch (error) {
       console.error('Error clearing workout history:', error);
+      throw error;
+    }
+  },
+
+  async getExerciseStats(): Promise<ExerciseSummary[]> {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('User not authenticated');
+
+      const q = query(
+        collection(db, 'workoutLogs'),
+        where('userId', '==', userId),
+        orderBy('date', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const exerciseMap = new Map<string, ExerciseSummary>();
+
+      snapshot.docs.forEach(doc => {
+        const log = doc.data();
+        log.exercises?.forEach(exercise => {
+          if (!exercise.sets || exercise.sets.length === 0) return;
+
+          const validWeights = exercise.sets
+            .map(s => s.weight || 0)
+            .filter(w => !isNaN(w));
+
+          if (validWeights.length > 0) {
+            const maxWeight = Math.max(...validWeights);
+            const totalVolume = exercise.sets.reduce((sum, set) => 
+              sum + ((set.weight || 0) * (set.actualReps || 0)), 0);
+
+            if (!exerciseMap.has(exercise.exerciseId)) {
+              exerciseMap.set(exercise.exerciseId, {
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                lastWeight: maxWeight,
+                bestWeight: maxWeight,
+                lastVolume: totalVolume,
+                lastDate: log.date
+              });
+            } else {
+              const existing = exerciseMap.get(exercise.exerciseId)!;
+              exerciseMap.set(exercise.exerciseId, {
+                ...existing,
+                lastWeight: maxWeight,
+                bestWeight: Math.max(existing.bestWeight, maxWeight),
+                lastVolume: totalVolume,
+                lastDate: log.date
+              });
+            }
+          }
+        });
+      });
+
+      return Array.from(exerciseMap.values());
+    } catch (error) {
+      console.error('Error getting exercise stats:', error);
+      throw error;
+    }
+  },
+
+  async getExerciseHistory(exerciseId: string): Promise<ExerciseData[]> {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('User not authenticated');
+
+      const q = query(
+        collection(db, 'workoutLogs'),
+        where('userId', '==', userId),
+        orderBy('date', 'asc')
+      );
+
+      const snapshot = await getDocs(q);
+      const exerciseData: ExerciseData[] = [];
+
+      snapshot.docs.forEach(doc => {
+        const log = doc.data();
+        const exercise = log.exercises?.find(e => e.exerciseId === exerciseId);
+
+        if (exercise?.sets?.length > 0) {
+          const validSets = exercise.sets.filter(s => 
+            typeof s.weight === 'number' && 
+            !isNaN(s.weight) &&
+            typeof s.actualReps === 'number' &&
+            !isNaN(s.actualReps)
+          );
+
+          if (validSets.length > 0) {
+            const maxWeight = Math.max(...validSets.map(s => s.weight));
+            const totalVolume = validSets.reduce((sum, set) => 
+              sum + (set.weight * set.actualReps), 0);
+            const totalReps = validSets.reduce((sum, set) => 
+              sum + set.actualReps, 0);
+
+            exerciseData.push({
+              date: log.date,
+              maxWeight,
+              totalVolume,
+              totalReps
+            });
+          }
+        }
+      });
+
+      return exerciseData
+        .filter(data => !isNaN(data.maxWeight) && !isNaN(data.totalVolume))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    } catch (error) {
+      console.error('Error getting exercise history:', error);
       throw error;
     }
   }

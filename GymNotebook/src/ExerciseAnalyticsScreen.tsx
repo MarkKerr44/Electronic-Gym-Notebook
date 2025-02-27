@@ -1,21 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator
+} from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
-interface ExerciseData {
-  date: string;
-  maxWeight: number;
-  totalVolume: number;
-  totalReps: number;
-}
+import { workoutService } from './services/workoutService';
+import type { ExerciseData } from './services/workoutService';
 
 export default function ExerciseAnalyticsScreen({ route }) {
   const { exerciseId, exerciseName } = route.params;
   const [exerciseHistory, setExerciseHistory] = useState<ExerciseData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -24,43 +28,13 @@ export default function ExerciseAnalyticsScreen({ route }) {
 
   const loadExerciseHistory = async () => {
     try {
-      const logs = await AsyncStorage.getItem('workoutLogs');
-      if (logs) {
-        const allLogs = JSON.parse(logs);
-        const exerciseData: ExerciseData[] = [];
-
-        allLogs.forEach(log => {
-          const exercise = log.exercises.find(e => e.exerciseId === exerciseId);
-          if (exercise && exercise.sets && exercise.sets.length > 0) {
-            const validWeights = exercise.sets
-              .map(s => s.weight)
-              .filter(w => typeof w === 'number' && !isNaN(w));
-
-            if (validWeights.length > 0) {
-              const maxWeight = Math.max(...validWeights);
-              const totalVolume = exercise.sets.reduce((sum, set) => 
-                sum + ((set.weight || 0) * (set.actualReps || 0)), 0);
-              const totalReps = exercise.sets.reduce((sum, set) => 
-                sum + (set.actualReps || 0), 0);
-
-              exerciseData.push({
-                date: log.date,
-                maxWeight: maxWeight || 0,
-                totalVolume: totalVolume || 0,
-                totalReps: totalReps || 0
-              });
-            }
-          }
-        });
-
-        const validData = exerciseData
-          .filter(data => !isNaN(data.maxWeight) && !isNaN(data.totalVolume))
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        setExerciseHistory(validData);
-      }
+      setIsLoading(true);
+      const history = await workoutService.getExerciseHistory(exerciseId);
+      setExerciseHistory(history);
     } catch (error) {
       console.error('Error loading exercise history:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,7 +51,12 @@ export default function ExerciseAnalyticsScreen({ route }) {
           <Text style={styles.title}>{exerciseName} Progress</Text>
         </View>
         
-        {exerciseHistory.length > 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading exercise history...</Text>
+          </View>
+        ) : exerciseHistory.length > 0 ? (
           <ScrollView>
             <View style={styles.chartContainer}>
               <Text style={styles.chartTitle}>Max Weight Progress</Text>
@@ -192,5 +171,15 @@ const styles = StyleSheet.create({
   noDataText: {
     color: '#FFF',
     fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFF',
+    fontSize: 16,
+    marginTop: 10,
   },
 });

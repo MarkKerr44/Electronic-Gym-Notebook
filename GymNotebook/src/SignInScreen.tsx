@@ -174,6 +174,12 @@ const SignInScreen: React.FC = () => {
                 </Animated.Text>
               ) : null}
             </View>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('ForgotPasswordScreen')}
+              style={styles.forgotPasswordContainer}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
             {firebaseError ? (
               <Animated.Text style={[styles.firebaseErrorText, { opacity: firebaseErrorAnim }]}>
                 {firebaseError}
@@ -290,6 +296,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFC371',
     fontWeight: 'bold',
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: '#FFC371',
+    fontSize: 14,
   },
 });
 

@@ -27,6 +27,7 @@ import RoutineCalendarScreen from './RoutineCalendarScreen';
 import { NotificationProvider } from '../context/NotificationContext';
 import ExerciseAnalyticsScreen from './ExerciseAnalyticsScreen';
 import ExerciseStatsScreen from './ExerciseStatsScreen';
+import ForgotPasswordScreen from './ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -146,6 +147,11 @@ function App() {
                 name="ExerciseStatsScreen"
                 component={ExerciseStatsScreen}
                 options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ForgotPasswordScreen"
+                component={ForgotPasswordScreen}
+                options={{ title: 'Forgot Password' }}
               />
             </Stack.Navigator>
           </NavigationContainer>
