@@ -10,14 +10,15 @@ import {
   FlatList,
   Platform,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { ThemeContext } from '../context/ThemeProvider';
 import { getThemeColors } from '../context/themeHelpers';
+import { workoutService } from './services/workoutService';
 
 interface Exercise {
   id: string;
@@ -56,6 +57,7 @@ function WorkoutDetailsScreen() {
   const [tempSets, setTempSets] = useState(3);
   const [tempReps, setTempReps] = useState(10);
   const [tempRest, setTempRest] = useState(60);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadWorkout();
@@ -63,18 +65,23 @@ function WorkoutDetailsScreen() {
   }, []);
 
   const loadWorkout = async () => {
+    setIsLoading(true);
     try {
-      const stored = await AsyncStorage.getItem('workouts');
-      const parsed: Workout[] = stored ? JSON.parse(stored) : [];
-      const found = parsed.find((w) => w.id === workoutId);
+      const found = await workoutService.getWorkoutById(workoutId);
       if (found) {
         setWorkout(found);
         setWorkoutName(found.name);
       } else {
-        Alert.alert('Workout not found');
+        Alert.alert('Error', 'Workout not found');
         navigation.goBack();
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error loading workout:', error);
+      Alert.alert('Error', 'Failed to load workout');
+      navigation.goBack();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const loadExercisesData = async () => {
@@ -84,15 +91,12 @@ function WorkoutDetailsScreen() {
 
   const saveWorkout = async (updated: Workout) => {
     try {
-      const stored = await AsyncStorage.getItem('workouts');
-      const parsed: Workout[] = stored ? JSON.parse(stored) : [];
-      const idx = parsed.findIndex((w) => w.id === workoutId);
-      if (idx !== -1) {
-        parsed[idx] = updated;
-        await AsyncStorage.setItem('workouts', JSON.stringify(parsed));
-        setWorkout(updated);
-      }
-    } catch {}
+      await workoutService.updateWorkout(updated.id, updated);
+      setWorkout(updated);
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      Alert.alert('Error', 'Failed to save changes');
+    }
   };
 
   const handleEditWorkoutName = () => {
@@ -107,11 +111,15 @@ function WorkoutDetailsScreen() {
     }
   };
 
-  const handleDeleteExercise = (exerciseId: string) => {
+  const handleDeleteExercise = async (exerciseId: string) => {
     if (workout) {
-      const updatedExercises = workout.exercises.filter((e) => e.id !== exerciseId);
-      const updated = { ...workout, exercises: updatedExercises };
-      saveWorkout(updated);
+      try {
+        const updatedExercises = workout.exercises.filter((e) => e.id !== exerciseId);
+        const updated = { ...workout, exercises: updatedExercises };
+        await saveWorkout(updated);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to delete exercise');
+      }
     }
   };
 
@@ -127,19 +135,23 @@ function WorkoutDetailsScreen() {
     setModalVisible(true);
   };
 
-  const addExercisesToWorkout = () => {
+  const addExercisesToWorkout = async () => {
     if (workout) {
-      const newExercises = selectedExercisesInModal.map((ex) => ({
-        ...ex,
-        id: Date.now().toString() + Math.random().toString(),
-        sets: 3,
-        reps: 10,
-        rest: 60,
-      }));
-      const updated = { ...workout, exercises: [...workout.exercises, ...newExercises] };
-      saveWorkout(updated);
-      setSelectedExercisesInModal([]);
-      setModalVisible(false);
+      try {
+        const newExercises = selectedExercisesInModal.map((ex) => ({
+          ...ex,
+          id: Date.now().toString() + Math.random().toString(),
+          sets: 3,
+          reps: 10,
+          rest: 60,
+        }));
+        const updated = { ...workout, exercises: [...workout.exercises, ...newExercises] };
+        await saveWorkout(updated);
+        setSelectedExercisesInModal([]);
+        setModalVisible(false);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to add exercises');
+      }
     }
   };
 
@@ -166,6 +178,19 @@ function WorkoutDetailsScreen() {
       </TouchableOpacity>
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <LinearGradient colors={gradient} style={styles.gradientBackground}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading workout...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   if (!workout) return null;
 
@@ -493,6 +518,16 @@ const styles = StyleSheet.create({
   editInput: {
     borderBottomWidth: 1,
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 18,
+    color: '#FFC371',
   },
 });
 

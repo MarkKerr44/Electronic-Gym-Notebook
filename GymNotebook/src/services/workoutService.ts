@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/firebaseConfig';
 
 interface Exercise {
@@ -66,6 +66,34 @@ export const workoutService = {
       }));
     } catch (error) {
       console.error('Error getting workouts:', error);
+      throw error;
+    }
+  },
+
+  async getWorkoutById(workoutId: string) {
+    try {
+      const docRef = doc(db, 'workouts', workoutId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting workout:', error);
+      throw error;
+    }
+  },
+
+  async updateWorkout(workoutId: string, updates: Partial<Workout>) {
+    try {
+      const docRef = doc(db, 'workouts', workoutId);
+      await updateDoc(docRef, {
+        ...updates,
+        lastModified: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating workout:', error);
       throw error;
     }
   }
