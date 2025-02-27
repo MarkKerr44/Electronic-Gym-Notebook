@@ -22,48 +22,62 @@ jobs:
           distribution: 'adopt'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Cache Gradle dependencies
+      - name: Cache Gradle packages
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/build.gradle') }}
-          restore-keys: gradle-${{ runner.os }}-
+            GymNotebook/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Cache Node modules
         uses: actions/cache@v3
         with:
           path: GymNotebook/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('GymNotebook/yarn.lock') }}
-          restore-keys: node-modules-${{ runner.os }}-
+          key: ${{ runner.os }}-node-${{ hashFiles('GymNotebook/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      - name: Install apt deps (ninja & cmake)
-        run: sudo apt-get update && sudo apt-get install -y ninja-build cmake
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.14
+        with:
+          cmake-version: '3.22.1'
 
       - name: Install dependencies 
         working-directory: GymNotebook
-        run: yarn install
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Android SDK tools
+        run: |
+          echo "y" | sdkmanager --install "cmake;3.22.1"
+          echo "y" | sdkmanager --install "ndk;25.1.8937393"
+          echo "y" | sdkmanager --install "build-tools;33.0.0"
 
       - name: Make gradlew executable
         working-directory: GymNotebook/android
         run: chmod +x gradlew
 
-      - name: Install Android CMake
-        run: yes | sdkmanager --install "cmake;3.22.1"
-
-      - name: Clean Gradle build
+      - name: Clean and Build Debug APK
         working-directory: GymNotebook/android
-        run: ./gradlew clean
-
-      - name: Build Debug APK
-        working-directory: GymNotebook/android
-        run: ./gradlew assembleDebug
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
+          ./gradlew clean assembleDebug --no-daemon
 
       - name: Archive APK
         uses: actions/upload-artifact@v4
