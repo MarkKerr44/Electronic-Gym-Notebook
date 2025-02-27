@@ -11,14 +11,15 @@ import {
   Pressable,
   Platform,
   Modal,
-  Animated
+  Animated,
+  ActivityIndicator
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Swipeable } from 'react-native-gesture-handler';
+import { weightService } from './services/weightService';
 
 interface WeightEntry {
   id: string;
@@ -45,6 +46,7 @@ const WeightTrackerScreen: React.FC = () => {
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadWeightEntries();
@@ -71,33 +73,24 @@ const WeightTrackerScreen: React.FC = () => {
 
   const loadUnitPreference = async () => {
     try {
-      const storedUnit = await AsyncStorage.getItem('weightUnit');
+      const storedUnit = await weightService.getUserPreferences();
       if (storedUnit === 'kg' || storedUnit === 'lbs') {
         setUnit(storedUnit);
       }
     } catch (error) {}
   };
 
-  const saveUnitPreference = async (selectedUnit: Unit) => {
-    try {
-      await AsyncStorage.setItem('weightUnit', selectedUnit);
-    } catch (error) {}
-  };
-
   const loadWeightEntries = async () => {
     try {
-      const storedEntries = await AsyncStorage.getItem('weightEntries');
-      if (storedEntries) {
-        const parsedEntries: WeightEntry[] = JSON.parse(storedEntries);
-        setWeightEntries(parsedEntries);
-      }
-    } catch (error) {}
-  };
-
-  const saveWeightEntries = async (entries: WeightEntry[]) => {
-    try {
-      await AsyncStorage.setItem('weightEntries', JSON.stringify(entries));
-    } catch (error) {}
+      setIsLoading(true);
+      const entries = await weightService.getWeightEntries();
+      setWeightEntries(entries);
+    } catch (error) {
+      console.error('Error loading entries:', error);
+      showToast('Failed to load weight entries.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const convertToLbs = (kg: number): number => parseFloat((kg * 2.20462).toFixed(1));
@@ -105,17 +98,22 @@ const WeightTrackerScreen: React.FC = () => {
   const formatWeight = (weight: number): string =>
     unit === 'kg' ? `${weight} kg` : `${convertToLbs(weight)} lbs`;
 
-  const toggleUnit = () => {
+  const toggleUnit = async () => {
     const newUnit: Unit = unit === 'kg' ? 'lbs' : 'kg';
-    if (newWeight) {
-      const weightNum = parseFloat(newWeight);
-      if (!isNaN(weightNum)) {
-        let converted = unit === 'kg' ? weightNum * 2.20462 : weightNum / 2.20462;
-        setNewWeight(converted.toFixed(1));
+    try {
+      await weightService.saveUserPreferences({ unit: newUnit });
+      setUnit(newUnit);
+      if (newWeight) {
+        const weightNum = parseFloat(newWeight);
+        if (!isNaN(weightNum)) {
+          let converted = unit === 'kg' ? weightNum * 2.20462 : weightNum / 2.20462;
+          setNewWeight(converted.toFixed(1));
+        }
       }
+    } catch (error) {
+      console.error('Error saving unit preference:', error);
+      showToast('Failed to save unit preference.', 'error');
     }
-    setUnit(newUnit);
-    saveUnitPreference(newUnit);
   };
 
   const formatDate = (date: Date): string => {
@@ -133,20 +131,23 @@ const WeightTrackerScreen: React.FC = () => {
       showToast('Please enter a valid weight.', 'error');
       return;
     }
-    const entryDate = formatDate(selectedDate);
-    const entry: WeightEntry = {
-      id: Date.now().toString(),
-      weight: unit === 'kg' ? weightNumber : convertToKg(weightNumber),
-      date: entryDate
-    };
-    const updatedEntries = [entry, ...weightEntries];
+
     try {
-      await AsyncStorage.setItem('weightEntries', JSON.stringify(updatedEntries));
-      setWeightEntries(updatedEntries);
+      const entryDate = formatDate(selectedDate);
+      const entry = {
+        weight: unit === 'kg' ? weightNumber : convertToKg(weightNumber),
+        date: entryDate
+      };
+
+      await weightService.saveWeightEntry(entry);
+      await loadWeightEntries(); 
       setNewWeight('');
       showToast('Your weight entry has been saved.', 'success');
       Keyboard.dismiss();
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error adding weight:', error);
+      showToast('Failed to save weight entry.', 'error');
+    }
   };
 
   const onChangeDate = (event: any, selected?: Date) => {
@@ -157,9 +158,14 @@ const WeightTrackerScreen: React.FC = () => {
   };
 
   const handleDeleteEntry = async (id: string) => {
-    const updatedEntries = weightEntries.filter(entry => entry.id !== id);
-    setWeightEntries(updatedEntries);
-    await saveWeightEntries(updatedEntries);
+    try {
+      await weightService.deleteEntry(id);
+      setWeightEntries(weightEntries.filter(entry => entry.id !== id));
+      showToast('Entry deleted successfully.', 'success');
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      showToast('Failed to delete entry.', 'error');
+    }
   };
 
   const confirmDelete = (id: string) => {
@@ -273,15 +279,22 @@ const WeightTrackerScreen: React.FC = () => {
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradient}>
       <SafeAreaView style={styles.safeArea}>
-        <FlatList
-          data={getSortedEntries()}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          ListHeaderComponent={ListHeaderComponent}
-          ListEmptyComponent={<Text style={styles.noEntriesText}>No weight entries yet.</Text>}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={styles.listContainer}
-        />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading weight entries...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={getSortedEntries()}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            ListHeaderComponent={ListHeaderComponent}
+            ListEmptyComponent={<Text style={styles.noEntriesText}>No weight entries yet.</Text>}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            contentContainerStyle={styles.listContainer}
+          />
+        )}
       </SafeAreaView>
       {filterModalVisible && (
         <View style={styles.modalOverlay}>
@@ -520,7 +533,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center'
   },
-  deleteButtonModalText: { color: '#fff', fontSize: 16, fontWeight: '600' }
+  deleteButtonModalText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFF',
+    fontSize: 16,
+    marginTop: 10,
+  },
 });
 
 export default WeightTrackerScreen;
