@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import * as RN from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import exercisesData from '../exercises.json';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
+import { workoutService } from './services/workoutService';
 
 const {
   View,
@@ -60,6 +60,7 @@ const CreateWorkoutScreen: React.FC = () => {
   const [defaultSets, setDefaultSets] = useState('3');
   const [defaultReps, setDefaultReps] = useState('10');
   const [defaultRest, setDefaultRest] = useState('60');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -195,6 +196,49 @@ const CreateWorkoutScreen: React.FC = () => {
     </View>
   );
 
+  const handleSaveWorkout = async () => {
+    if (workoutName.trim() === "") {
+      Alert.alert("Please enter a workout name.");
+      return;
+    }
+
+    if (selectedExercises.length === 0) {
+      Alert.alert("Please add at least one exercise.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const workout = {
+        name: workoutName,
+        exercises: selectedExercises
+      };
+
+      await workoutService.saveWorkout(workout);
+      
+      setWorkoutName("");
+      setSelectedExercises([]);
+      Alert.alert(
+        "Success", 
+        "Workout saved successfully!",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error("Error saving workout:", error);
+      Alert.alert(
+        "Error",
+        "Failed to save workout. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.safeArea}>
@@ -289,31 +333,16 @@ const CreateWorkoutScreen: React.FC = () => {
             </View>
           )}
           <TouchableOpacity
-            style={styles.saveWorkoutButton}
-            onPress={async () => {
-              if (workoutName.trim() === "") {
-                Alert.alert("Please enter a workout name.");
-                return;
-              }
-              const workout = {
-                id: Date.now().toString(),
-                name: workoutName,
-                exercises: selectedExercises
-              };
-              try {
-                const existingWorkouts = await AsyncStorage.getItem("workouts");
-                let workouts = existingWorkouts ? JSON.parse(existingWorkouts) : [];
-                workouts.push(workout);
-                await AsyncStorage.setItem("workouts", JSON.stringify(workouts));
-                setWorkoutName("");
-                setSelectedExercises([]);
-                Alert.alert("Workout saved successfully!");
-              } catch (error) {
-                console.log("Error saving workout:", error);
-              }
-            }}
+            style={[
+              styles.saveWorkoutButton,
+              isSaving && { opacity: 0.7 }
+            ]}
+            onPress={handleSaveWorkout}
+            disabled={isSaving}
           >
-            <Text style={styles.saveWorkoutButtonText}>Save Workout</Text>
+            <Text style={styles.saveWorkoutButtonText}>
+              {isSaving ? 'Saving...' : 'Save Workout'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -464,7 +493,15 @@ const styles = StyleSheet.create({
   statHeaderCell: { flex: 1, fontSize: 16, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' },
   statRow: { flexDirection: 'row', paddingVertical: 5 },
   statCell: { flex: 1, fontSize: 16, color: '#cccccc', textAlign: 'center' },
-  saveWorkoutButton: { backgroundColor: '#FFC371', padding: 15, borderRadius: 8, alignItems: 'center', marginHorizontal: 20, marginBottom: 20 },
+  saveWorkoutButton: { 
+    backgroundColor: '#FFC371', 
+    padding: 15, 
+    borderRadius: 8, 
+    alignItems: 'center', 
+    marginHorizontal: 20, 
+    marginBottom: 20, 
+    opacity: 1 
+  },
   saveWorkoutButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   listContainer: { paddingBottom: 20 },
   modalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center' },

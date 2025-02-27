@@ -11,11 +11,13 @@ import {
   Animated,
   Easing,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { workoutService } from './services/workoutService';
 
 interface Workout {
   id: string;
@@ -32,6 +34,7 @@ interface Workout {
 const MyWorkoutsScreen: React.FC = () => {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const translateAnim = React.useRef(new Animated.Value(100)).current;
   const navigation = useNavigation();
@@ -54,11 +57,13 @@ const MyWorkoutsScreen: React.FC = () => {
 
   const loadWorkouts = async () => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      const parsedWorkouts = storedWorkouts ? JSON.parse(storedWorkouts) : [];
-      setWorkouts(parsedWorkouts);
+      const fetchedWorkouts = await workoutService.getUserWorkouts();
+      setWorkouts(fetchedWorkouts);
     } catch (error) {
-      console.error('Failed to load workouts', error);
+      console.error('Failed to load workouts:', error);
+      Alert.alert('Error', 'Failed to load workouts. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,9 +77,13 @@ const MyWorkoutsScreen: React.FC = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const filteredWorkouts = workouts.filter((workout) => workout.id !== workoutId);
-            setWorkouts(filteredWorkouts);
-            await AsyncStorage.setItem('workouts', JSON.stringify(filteredWorkouts));
+            try {
+              await workoutService.deleteWorkout(workoutId);
+              setWorkouts(workouts.filter(workout => workout.id !== workoutId));
+            } catch (error) {
+              console.error('Failed to delete workout:', error);
+              Alert.alert('Error', 'Failed to delete workout. Please try again.');
+            }
           },
         },
       ],
@@ -123,7 +132,12 @@ const MyWorkoutsScreen: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Workouts</Text>
         </View>
-        {workouts.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading workouts...</Text>
+          </View>
+        ) : workouts.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>You have no saved workouts yet.</Text>
             <TouchableOpacity
@@ -222,6 +236,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#302b63',
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#CCCCCC',
+    marginTop: 10,
   },
 });
 
