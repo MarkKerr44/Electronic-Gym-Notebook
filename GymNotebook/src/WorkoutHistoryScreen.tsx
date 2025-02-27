@@ -8,12 +8,14 @@ import {
   FlatList,
   Animated,
   Easing,
-  Platform
+  Platform,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { workoutService } from './services/workoutService';
 
 interface ExerciseLog {
   exerciseId: string;
@@ -28,7 +30,7 @@ interface ExerciseLog {
 interface WorkoutLog {
   workoutId: string;
   workoutName: string;
-  date: string;
+  date: string; 
   exercises: ExerciseLog[];
 }
 
@@ -43,6 +45,7 @@ interface Props {
 }
 
 const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
+  const [isLoading, setIsLoading] = useState(true);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [expandedIndexes, setExpandedIndexes] = useState<number[]>([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -74,11 +77,20 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
 
   const loadWorkoutLogs = async () => {
     try {
-      const logs = await AsyncStorage.getItem('workoutLogs');
-      if (logs) {
-        setWorkoutLogs(JSON.parse(logs));
-      }
-    } catch (error) {}
+      setIsLoading(true);
+      const logs = await workoutService.getWorkoutLogs();
+      setWorkoutLogs(logs.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ));
+    } catch (error) {
+      console.error('Error loading workout logs:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load workout history. Please check your connection.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const highlightWorkout = (logId: string) => {
@@ -98,23 +110,39 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
   };
 
   const handleClearHistory = async () => {
-    try {
-      await AsyncStorage.removeItem('workoutLogs');
-      setWorkoutLogs([]);
-    } catch (error) {}
+    Alert.alert(
+      'Clear History',
+      'Are you sure you want to delete all workout history? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await workoutService.clearWorkoutHistory();
+              setWorkoutLogs([]);
+            } catch (error) {
+              console.error('Error clearing history:', error);
+              Alert.alert('Error', 'Failed to clear workout history.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderExerciseItem = (exercise: ExerciseLog) => {
     let totalReps = 0;
     let maxWeight = 0;
     let totalVolume = 0;  
-
+  
     exercise.sets.forEach(s => {
       totalReps += s.actualReps;
       maxWeight = Math.max(maxWeight, s.weight);
       totalVolume += s.weight * s.actualReps;
     });
-
+  
     return (
       <TouchableOpacity 
         style={styles.exerciseDetail}
@@ -125,6 +153,7 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
       >
         <Text style={styles.exerciseTitle}>{exercise.exerciseName}</Text>
         <Text style={styles.exerciseSets}>Sets: {exercise.sets.length}</Text>
+        <Text style={styles.exerciseStats}>Total Reps: {totalReps}</Text>
         <Text style={styles.exerciseStats}>Max Weight: {maxWeight}kg</Text>
         <Text style={styles.exerciseStats}>Total Volume: {totalVolume}kg</Text>
         
@@ -149,6 +178,17 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
 
   const renderItem = ({ item, index }: { item: WorkoutLog; index: number }) => {
     const isExpanded = expandedIndexes.includes(index);
+    
+    const workoutDate = new Date(item.date);
+    const formattedDate = workoutDate.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
     return (
       <Animated.View
         style={[
@@ -161,7 +201,7 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
       >
         <TouchableOpacity onPress={() => handleToggleExpand(index)} style={styles.historyHeader}>
           <Text style={styles.historyWorkoutName}>{item.workoutName}</Text>
-          <Text style={styles.historyDate}>{new Date(item.date).toLocaleString()}</Text>
+          <Text style={styles.historyDate}>{formattedDate}</Text>
           <MaterialIcons
             name={isExpanded ? 'expand-less' : 'expand-more'}
             size={24}
@@ -194,7 +234,12 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Workout History</Text>
         </View>
-        {workoutLogs.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading workout history...</Text>
+          </View>
+        ) : workoutLogs.length === 0 ? (
           <View style={styles.noHistoryContainer}>
             <Text style={styles.noHistoryText}>No completed workouts to show.</Text>
           </View>
@@ -345,6 +390,16 @@ const styles = StyleSheet.create({
   analyticsIcon: {
     marginTop: 10,
     alignSelf: 'flex-end',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#FFC371',
   },
 });
 

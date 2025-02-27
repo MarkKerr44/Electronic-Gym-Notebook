@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, Timestamp, getDoc, updateDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, Timestamp, getDoc, updateDoc, orderBy, limit, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../../firebase/firebaseConfig';
 
 interface Exercise {
@@ -177,6 +177,68 @@ export const workoutService = {
       return docRef.id;
     } catch (error) {
       console.error('Error updating calendar:', error);
+      throw error;
+    }
+  },
+
+  async clearWorkoutHistory() {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error('User not authenticated');
+
+      // Get all workout logs for the user
+      const q = query(
+        collection(db, 'workoutLogs'),
+        where('userId', '==', userId)
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      // Delete each document in batches of 500
+      const batch = writeBatch(db);
+      let operationCount = 0;
+      
+      for (const doc of snapshot.docs) {
+        batch.delete(doc.ref);
+        operationCount++;
+        
+        // Commit batch when it reaches 500 operations
+        if (operationCount === 500) {
+          await batch.commit();
+          operationCount = 0;
+        }
+      }
+      
+      // Commit any remaining operations
+      if (operationCount > 0) {
+        await batch.commit();
+      }
+
+      // Also clear calendar entries
+      const calendarQ = query(
+        collection(db, 'calendar'),
+        where('userId', '==', userId)
+      );
+      
+      const calendarSnapshot = await getDocs(calendarQ);
+      const calendarBatch = writeBatch(db);
+      operationCount = 0;
+      
+      for (const doc of calendarSnapshot.docs) {
+        calendarBatch.delete(doc.ref);
+        operationCount++;
+        
+        if (operationCount === 500) {
+          await calendarBatch.commit();
+          operationCount = 0;
+        }
+      }
+      
+      if (operationCount > 0) {
+        await calendarBatch.commit();
+      }
+    } catch (error) {
+      console.error('Error clearing workout history:', error);
       throw error;
     }
   }
