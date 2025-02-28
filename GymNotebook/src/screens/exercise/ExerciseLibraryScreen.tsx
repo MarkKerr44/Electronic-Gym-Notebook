@@ -16,8 +16,8 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import BottomNavBar from '../components/BottomNavBar';
-import exercisesData from '../exercises.json';
+import BottomNavBar from '../../components/BottomNavBar';
+import exercisesData from '../../../exercises.json';
 
 interface Exercise {
   id: string;

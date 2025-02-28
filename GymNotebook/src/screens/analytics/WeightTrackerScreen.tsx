@@ -19,7 +19,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Swipeable } from 'react-native-gesture-handler';
-import { weightService } from './services/weightService';
+import { weightService } from '../../services/weightService';
 
 interface WeightEntry {
   id: string;

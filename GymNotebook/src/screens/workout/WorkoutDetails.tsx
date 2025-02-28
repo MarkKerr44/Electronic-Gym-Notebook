@@ -16,9 +16,9 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
-import { ThemeContext } from '../context/ThemeProvider';
-import { getThemeColors } from '../context/themeHelpers';
-import { workoutService } from './services/workoutService';
+import { ThemeContext } from '../../context/ThemeProvider';
+import { getThemeColors } from '../../context/themeHelpers';
+import { workoutService } from '../../services/workoutService';
 
 interface Exercise {
   id: string;
@@ -85,7 +85,7 @@ function WorkoutDetailsScreen() {
   };
 
   const loadExercisesData = async () => {
-    const data = await import('../exercises.json');
+    const data = await import('../../../exercises.json');
     setExercisesData(data.default);
   };
 

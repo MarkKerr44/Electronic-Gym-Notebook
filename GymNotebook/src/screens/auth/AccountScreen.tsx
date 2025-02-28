@@ -27,7 +27,7 @@ import {
   signOut
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '../firebase/firebaseConfig';
+import { auth } from '../../../firebase/firebaseConfig';
 
 type RootStackParamList = {
   OpeningScreen: undefined;

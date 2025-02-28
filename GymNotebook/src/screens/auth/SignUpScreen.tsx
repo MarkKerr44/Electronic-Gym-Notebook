@@ -14,7 +14,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as EmailValidator from 'email-validator';
-import { auth } from '../firebase/firebaseConfig';
+import { auth } from '../../../firebase/firebaseConfig';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
   createUserWithEmailAndPassword,

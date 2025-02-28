@@ -15,7 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNotificationService } from './services/NotificationService';
+import { useNotificationService } from '../../services/NotificationService';
 
 type RootStackParamList = {
   RoutineCalendarScreen: { routineToApply?: Routine } | undefined;

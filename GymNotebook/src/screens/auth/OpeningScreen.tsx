@@ -13,7 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useNavigation } from '@react-navigation/native';
-import bicepAnimation from '../assets/animations/bicep_animation.json';
+import bicepAnimation from '../../../assets/animations/bicep_animation.json';
 
 const { width, height } = Dimensions.get('window');
 

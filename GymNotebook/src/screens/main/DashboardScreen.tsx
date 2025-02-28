@@ -14,11 +14,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import BottomNavBar from '../components/BottomNavBar';
-import NotificationPanel from '../components/NotificationPanel';
-import { ThemeContext } from '../context/ThemeProvider';
-import { getThemeColors } from '../context/themeHelpers';
-import { useNotifications } from '../context/NotificationContext';
+import BottomNavBar from '../../components/BottomNavBar';
+import NotificationPanel from '../../components/NotificationPanel';
+import { ThemeContext } from '../../context/ThemeProvider';
+import { getThemeColors } from '../../context/themeHelpers';
+import { useNotifications } from '../../context/NotificationContext';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import exercisesData from '../../exercises.json';
+import exercisesData from '../../../exercises.json';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const ExerciseDetailScreen: React.FC = () => {

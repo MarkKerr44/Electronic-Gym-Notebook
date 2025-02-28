@@ -12,8 +12,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { workoutService } from './services/workoutService';
-import type { ExerciseSummary } from './services/workoutService';
+import { workoutService } from '../../services/workoutService';
+import type { ExerciseSummary } from '../../services/workoutService';
 
 export default function ExerciseStatsScreen() {
   const [exercises, setExercises] = useState<ExerciseSummary[]>([]);

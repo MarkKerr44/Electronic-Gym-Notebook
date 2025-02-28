@@ -14,8 +14,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNotificationService } from './services/NotificationService';
-import { workoutService } from './services/workoutService';
+import { useNotificationService } from '../../services/NotificationService';
+import { workoutService } from '../../services/workoutService';
 
 interface Exercise {
   id: string;

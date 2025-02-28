@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import * as RN from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import exercisesData from '../exercises.json';
+import exercisesData from '../../../exercises.json';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
-import { workoutService } from './services/workoutService';
+import { workoutService } from '../../services/workoutService';
 
 const {
   View,

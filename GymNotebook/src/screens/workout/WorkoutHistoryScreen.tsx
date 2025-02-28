@@ -15,7 +15,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { workoutService } from './services/workoutService';
+import { workoutService } from '../../services/workoutService';
 
 interface ExerciseLog {
   exerciseId: string;

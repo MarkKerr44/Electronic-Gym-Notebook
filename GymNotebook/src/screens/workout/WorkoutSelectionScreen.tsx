@@ -15,9 +15,9 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import BottomNavBar from '../components/BottomNavBar';
-import { ThemeContext } from '../context/ThemeProvider';
-import { getThemeColors } from '../context/themeHelpers';
+import BottomNavBar from '../../components/BottomNavBar';
+import { ThemeContext } from '../../context/ThemeProvider';
+import { getThemeColors } from '../../context/themeHelpers';
 
 interface PremadeWorkout {
   id: string;

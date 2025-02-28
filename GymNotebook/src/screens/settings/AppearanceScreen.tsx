@@ -10,7 +10,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-import { ThemeContext } from '../context/ThemeProvider';
+import { ThemeContext } from '../../context/ThemeProvider';
 
 export default function AppearanceScreen() {
   const navigation = useNavigation();

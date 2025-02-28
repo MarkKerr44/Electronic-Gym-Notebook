@@ -13,8 +13,8 @@ import { LineChart } from 'react-native-chart-kit';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { workoutService } from './services/workoutService';
-import type { ExerciseData } from './services/workoutService';
+import { workoutService } from '../../services/workoutService';
+import type { ExerciseData } from '../../services/workoutService';
 
 export default function ExerciseAnalyticsScreen({ route }) {
   const { exerciseId, exerciseName } = route.params;

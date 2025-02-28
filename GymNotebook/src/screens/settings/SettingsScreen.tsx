@@ -12,9 +12,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/firebaseConfig';
-import { ThemeContext } from '../context/ThemeProvider';
-import { getThemeColors } from '../context/themeHelpers';
+import { auth } from '../../../firebase/firebaseConfig';
+import { ThemeContext } from '../../context/ThemeProvider';
+import { getThemeColors } from '../../context/themeHelpers';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();

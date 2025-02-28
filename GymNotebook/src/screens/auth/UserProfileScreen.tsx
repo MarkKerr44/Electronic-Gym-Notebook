@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { userService } from './services/userService';
+import { userService } from '../../services/userService';
 
 export default function UserProfileScreen() {
   const navigation = useNavigation();
