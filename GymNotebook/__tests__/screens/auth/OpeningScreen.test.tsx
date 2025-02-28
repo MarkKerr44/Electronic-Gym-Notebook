@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, jest } from '@jest/globals';
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import OpeningScreen from '../src/OpeningScreen';
+import OpeningScreen from '../../../src/screens/auth/OpeningScreen';
 
 beforeEach(() => {
   jest.resetAllMocks();
