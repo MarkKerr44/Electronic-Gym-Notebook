@@ -89,6 +89,11 @@ jobs:
         working-directory: GymNotebook
         run: yarn jest --testPathPattern=__tests__/screens/auth --coverage
 
+      - name: Run Components and Services Tests
+        working-directory: GymNotebook
+        run: yarn jest "src/(components|services).*\\.test\\.(ts|tsx)$" --coverage
+
+
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
         with:

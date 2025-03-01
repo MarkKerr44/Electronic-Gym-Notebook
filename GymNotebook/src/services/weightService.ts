@@ -99,6 +99,9 @@ export const weightService = {
       }
       return 'kg'; 
     } catch (error) {
+      if (error instanceof Error && error.message === 'User not authenticated') {
+        throw error;
+      }
       console.error('Error getting user preferences:', error);
       return 'kg'; 
     }
