@@ -318,7 +318,6 @@ return (
                     <View style={styles.card}>
                         <Text style={styles.cardTitle}>Change Password</Text>
 
-                        {/* Current Password Section */}
                         <View style={styles.passwordContainer}>
                             <TextInput
                                 style={[styles.input, { flex: 1 }]}
@@ -348,7 +347,6 @@ return (
                             </TouchableOpacity>
                         </View>
 
-                        {/* Verify Button */}
                         {!isPasswordVerified && (
                             <TouchableOpacity 
                                 onPress={verifyCurrentPassword}
