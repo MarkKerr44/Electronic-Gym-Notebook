@@ -28,6 +28,8 @@ export default function UserProfileScreen() {
   const [showBMI, setShowBMI] = useState(false);
   const [sexModalVisible, setSexModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadProfile();
@@ -54,21 +56,10 @@ export default function UserProfileScreen() {
 
   function validateForm() {
     if (!age || !sex || !weight || !height) {
-      Alert.alert('Incomplete', 'Please fill in all fields.');
+      setError('Please fill in all fields.');
       return false;
     }
-    if (parseInt(age) < 13 || parseInt(age) > 120) {
-      Alert.alert('Invalid Age', 'Please enter a valid age between 13 and 120.');
-      return false;
-    }
-    if (parseFloat(weight) <= 0) {
-      Alert.alert('Invalid Weight', 'Please enter a valid weight.');
-      return false;
-    }
-    if (parseFloat(height) <= 0) {
-      Alert.alert('Invalid Height', 'Please enter a valid height.');
-      return false;
-    }
+    setError('');
     return true;
   }
 
@@ -83,10 +74,12 @@ export default function UserProfileScreen() {
         height,
         isMetric
       });
-      Alert.alert('Success', 'Your profile has been saved');
+      setSuccessMessage('Your profile has been saved');
+      setError('');
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile');
+      setError('Failed to save profile');
+      setSuccessMessage('');
     }
   }
 
@@ -127,6 +120,17 @@ export default function UserProfileScreen() {
     }
   }
 
+  const handleMetricToggle = (value: boolean) => {
+    setIsMetric(value);
+    if (value) {
+      setWeight(String(Math.round(Number(weight) / 2.20462)));
+      setHeight(String(Math.round(Number(height) * 2.54)));
+    } else {
+      setWeight(String(Math.round(Number(weight) * 2.20462)));
+      setHeight(String(Math.round(Number(height) / 2.54)));
+    }
+  };
+
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -149,6 +153,7 @@ export default function UserProfileScreen() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Age</Text>
                 <TextInput
+                  testID="age-input"
                   style={styles.input}
                   value={age}
                   onChangeText={setAge}
@@ -169,12 +174,18 @@ export default function UserProfileScreen() {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Body Measurements</Text>
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>Use Metric Units</Text>
-                <Switch value={isMetric} onValueChange={handleToggleUnits} />
+                <Text style={styles.label}>Use Metric Units</Text>
+                <Switch
+                  testID="metric-switch"
+                  value={isMetric}
+                  onValueChange={handleMetricToggle}
+                  accessibilityLabel="Use Metric Units"
+                />
               </View>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{isMetric ? 'Weight (kg)' : 'Weight (lbs)'}</Text>
                 <TextInput
+                  testID="weight-value"
                   style={styles.input}
                   value={weight}
                   onChangeText={setWeight}
@@ -186,6 +197,7 @@ export default function UserProfileScreen() {
               <View style={styles.formGroup}>
                 <Text style={styles.label}>{isMetric ? 'Height (cm)' : 'Height (in)'}</Text>
                 <TextInput
+                  testID="height-value"
                   style={styles.input}
                   value={height}
                   onChangeText={setHeight}
@@ -197,8 +209,40 @@ export default function UserProfileScreen() {
               <TouchableOpacity onPress={() => setShowBMI(!showBMI)} style={styles.bmiBox}>
                 <Text style={styles.bmiText}>{showBMI ? `BMI: ${calculateBMI()}` : 'Show BMI'}</Text>
               </TouchableOpacity>
+              <View>
+                <Text>Use Metric Units</Text>
+                <Switch
+                  accessibilityRole="switch"
+                  value={isMetric}
+                  onValueChange={setIsMetric}
+                />
+              </View>
+              <View>
+                <Text>Weight ({isMetric ? 'kg' : 'lbs'})</Text>
+                <Text>{isMetric ? `${weight} kg` : `${Math.round(Number(weight) * 2.20462)} lbs`}</Text>
+              </View>
+              <View>
+                <Text>Height ({isMetric ? 'cm' : 'in'})</Text>
+                <Text>{isMetric ? `${height} cm` : `${Math.round(Number(height) / 2.54)} in`}</Text>
+              </View>
             </View>
-            <TouchableOpacity onPress={handleSaveProfile} style={styles.saveButton}>
+            {error ? (
+              <Text testID="error-message" style={styles.errorText}>
+                {error}
+              </Text>
+            ) : null}
+
+            {successMessage ? (
+              <Text testID="success-message" style={styles.successText}>
+                {successMessage}
+              </Text>
+            ) : null}
+
+            <TouchableOpacity 
+              testID="save-button"
+              onPress={handleSaveProfile}
+              style={styles.saveButton}
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -314,6 +358,18 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     marginTop: 10,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  successText: {
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginVertical: 10,
+    fontSize: 16,
   },
 });
 
