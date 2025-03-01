@@ -41,10 +41,16 @@ interface SelectedExercise extends Exercise {
   rest: number;
 }
 
-const CreateWorkoutScreen: React.FC = () => {
+interface CreateWorkoutScreenProps {
+  initialExercises?: Exercise[];
+}
+
+const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({ 
+  initialExercises = [] 
+}) => {
   const navigation = useNavigation();
   const [workoutName, setWorkoutName] = useState('');
-  const [selectedExercises, setSelectedExercises] = useState<SelectedExercise[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState(initialExercises);
   const [viewMode, setViewMode] = useState<'exercises' | 'view' | 'stats'>('exercises');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
