@@ -20,9 +20,10 @@ const tabs = [
   { key: 'library', title: 'Library', icon: 'menu-book', route: 'ExerciseLibraryScreen' },
 ];
 
-function BottomNavBar() {
+const BottomNavBar: React.FC = () => {
   const navigation = useNavigation();
-  const { width } = Dimensions.get('window');
+  const dimensions = Dimensions.get('window');
+  const width = dimensions?.width ?? 400; // Provide fallback value
   const tabWidth = width / tabs.length;
 
   const routeIndex = useNavigationState((state) => {
@@ -45,44 +46,33 @@ function BottomNavBar() {
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#232526', '#414345']} style={StyleSheet.absoluteFillObject} />
-      <View style={styles.tabContainer}>
-        {tabs.map((tab, tabIndex) => {
-          const isActive = routeIndex === tabIndex;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => handleTabPress(tabIndex)}
-              style={styles.tabButton}
-            >
-              <View style={styles.iconContainer}>
-                <MaterialIcons
-                  name={tab.icon}
-                  size={30}
-                  color={isActive ? ACTIVE_COLOR : '#B0B0B0'}
-                  style={isActive ? styles.activeIcon : undefined}
-                />
-                <Text style={[styles.tabLabel, { color: isActive ? ACTIVE_COLOR : '#B0B0B0' }]}>
-                  {tab.title}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-      <Animated.View
-        style={[
-          styles.activeIndicator,
-          {
-            width: tabWidth,
-            transform: [{ translateX: translateValue }],
-          },
-        ]}
-      />
-    </View>
+    <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
+      {tabs.map((tab) => (
+        <TouchableOpacity
+          key={tab.key}
+          testID={`tab-${tab.key}`}
+          style={[
+            styles.tab,
+            routeIndex === tabs.findIndex(t => t.route === tab.route) && styles.activeTab
+          ]}
+          onPress={() => navigation.navigate(tab.route)}
+        >
+          <MaterialIcons
+            name={tab.icon}
+            size={24}
+            color={routeIndex === tabs.findIndex(t => t.route === tab.route) ? ACTIVE_COLOR : '#B0B0B0'}
+          />
+          <Text style={[
+            styles.tabText,
+            routeIndex === tabs.findIndex(t => t.route === tab.route) && styles.activeTabText
+          ]}>
+            {tab.title}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </LinearGradient>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -134,6 +124,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 0 },
   },
+  activeTab: {
+    borderTopColor: ACTIVE_COLOR,
+    borderTopWidth: 2
+  },
+  activeTabText: {
+    color: ACTIVE_COLOR
+  }
 });
 
 export default BottomNavBar;
