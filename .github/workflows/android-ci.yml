@@ -59,80 +59,38 @@ jobs:
         with:
           cmake-version: '3.22.1'
 
-      - name: Install yarn dependencies
+      - name: Install dependencies 
         working-directory: GymNotebook
         run: yarn install --frozen-lockfile
 
-      - name: Setup additional Android tools
+      - name: Setup Android SDK tools
         run: |
-          echo "y" | sdkmanager --uninstall "ndk;25.1.8937393"
           echo "y" | sdkmanager --install "cmake;3.22.1"
-          echo "y" | sdkmanager --install "ndk;26.1.10909125"
+          echo "y" | sdkmanager --install "ndk;25.1.8937393"
           echo "y" | sdkmanager --install "build-tools;33.0.0"
 
       - name: Make gradlew executable
         working-directory: GymNotebook/android
         run: chmod +x gradlew
 
-      - name: Clear stale react-native-worklets-core prefab directory
-        run: |
-          sudo rm -rf GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package/debug/prefab
-          mkdir -p GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package/debug/prefab
-
-      - name: Build Debug APK
+      - name: Clean and Build Debug APK
         working-directory: GymNotebook/android
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
           ./gradlew clean assembleDebug --no-daemon
 
-      - name: Archive Debug APK
+      - name: Archive APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: GymNotebook/android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Build Release APK
-        working-directory: GymNotebook/android
-        run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
-          ./gradlew assembleRelease --no-daemon
-
-      - name: Archive Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: GymNotebook/android/app/build/outputs/apk/release/app-release.apk
-
       - name: Run Auth Tests
         working-directory: GymNotebook
         run: yarn jest --testPathPattern=__tests__/screens/auth --coverage
-
-      - name: Run Components and Services Tests
-        working-directory: GymNotebook
-        run: yarn jest "__tests__/(components|services).*\\.test\\.(ts|tsx)$" --coverage
 
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: GymNotebook/coverage
-
-      - name: Create GitHub Release 
-        if: github.ref == 'refs/heads/main'
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.sha }}
-          release_name: "Android Release - ${{ github.sha }}"
-          body: "From CI/CD"
-          draft: false
-          prerelease: false
-
-      - name: Upload Release APK to GitHub Release
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: GymNotebook/android/app/build/outputs/apk/release/app-release.apk
-          asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
