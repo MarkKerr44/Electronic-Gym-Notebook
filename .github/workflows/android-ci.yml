@@ -65,7 +65,6 @@ jobs:
 
       - name: Setup additional Android tools
         run: |
-          # Uninstall old NDK to avoid conflicts
           echo "y" | sdkmanager --uninstall "ndk;25.1.8937393"
           echo "y" | sdkmanager --install "cmake;3.22.1"
           echo "y" | sdkmanager --install "ndk;26.1.10909125"
@@ -75,8 +74,10 @@ jobs:
         working-directory: GymNotebook/android
         run: chmod +x gradlew
 
-      - name: Remove stale react-native-worklets-core prefab directory
-        run: sudo rm -rf GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package
+      - name: Clear stale react-native-worklets-core prefab directory
+        run: |
+          sudo rm -rf GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package/debug/prefab
+          mkdir -p GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package/debug/prefab
 
       - name: Build Debug APK
         working-directory: GymNotebook/android
