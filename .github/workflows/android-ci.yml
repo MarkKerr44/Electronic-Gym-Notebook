@@ -66,17 +66,20 @@ jobs:
       - name: Setup additional Android tools
         run: |
           echo "y" | sdkmanager --install "cmake;3.22.1"
-          echo "y" | sdkmanager --install "ndk;25.1.8937393"
+          echo "y" | sdkmanager --install "ndk;26.1.10909125"
           echo "y" | sdkmanager --install "build-tools;33.0.0"
 
       - name: Make gradlew executable
         working-directory: GymNotebook/android
         run: chmod +x gradlew
 
+      - name: Remove stale react-native-worklets-core prefab directory
+        run: rm -rf GymNotebook/node_modules/react-native-worklets-core/android/build/intermediates/prefab_package
+
       - name: Build Debug APK
         working-directory: GymNotebook/android
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
           ./gradlew clean assembleDebug --no-daemon
 
       - name: Archive Debug APK
@@ -88,8 +91,7 @@ jobs:
       - name: Build Release APK
         working-directory: GymNotebook/android
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
-          # If you have signing configs, ensure they're configured
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125
           ./gradlew assembleRelease --no-daemon
 
       - name: Archive Release APK

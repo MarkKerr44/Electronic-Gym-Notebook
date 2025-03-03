@@ -4,7 +4,6 @@ import CreateWorkoutScreen from '../../../src/screens/workout/createWorkout';
 import { workoutService } from '../../../src/services/workoutService';
 import { Alert } from 'react-native';
 
-// Mock dependencies
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
@@ -122,11 +121,9 @@ describe('CreateWorkoutScreen', () => {
       <CreateWorkoutScreen initialExercises={[mockExercise]} />
     );
     
-    // Setup workout data
     const nameInput = getByPlaceholderText('Enter workout name');
     fireEvent.changeText(nameInput, 'Test Workout');
     
-    // Mock failed save
     (workoutService.saveWorkout as jest.Mock).mockRejectedValueOnce(new Error('Save failed'));
     
     const saveButton = getByText('Save Workout');
@@ -139,7 +136,6 @@ describe('CreateWorkoutScreen', () => {
       );
     });
 
-    // Verify workout service was called
     expect(workoutService.saveWorkout).toHaveBeenCalledWith({
       name: 'Test Workout',
       exercises: [mockExercise]
