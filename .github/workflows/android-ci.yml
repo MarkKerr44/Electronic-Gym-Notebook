@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write 
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -89,7 +92,6 @@ jobs:
         working-directory: GymNotebook/android
         run: |
           export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
-          # If you have signing configs, ensure they're configured
           ./gradlew assembleRelease --no-daemon
 
       - name: Archive Release APK
@@ -112,22 +114,17 @@ jobs:
           name: coverage
           path: GymNotebook/coverage
 
-      - name: Create GitHub Release 
+      - name: Create GitHub Release and Upload Asset
         if: github.ref == 'refs/heads/main'
-        id: create_release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.sha }}
-          release_name: "Android Release - ${{ github.sha }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.sha }}
+          name: "Android Release - ${{ github.sha }}"
           body: "From CI/CD"
           draft: false
           prerelease: false
-
-      - name: Upload Release APK to GitHub Release
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: GymNotebook/android/app/build/outputs/apk/release/app-release.apk
-          asset_name: app-release.apk
-          asset_content_type: application/vnd.android.package-archive
+          artifacts: "GymNotebook/android/app/build/outputs/apk/release/app-release.apk"
+          artifactContentType: "application/vnd.android.package-archive"
