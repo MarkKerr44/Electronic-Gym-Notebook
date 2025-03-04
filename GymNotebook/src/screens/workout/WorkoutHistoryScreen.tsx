@@ -30,7 +30,7 @@ interface ExerciseLog {
 interface WorkoutLog {
   workoutId: string;
   workoutName: string;
-  date: string; 
+  date: any;
   exercises: ExerciseLog[];
 }
 
@@ -79,9 +79,11 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
     try {
       setIsLoading(true);
       const logs = await workoutService.getWorkoutLogs();
-      setWorkoutLogs(logs.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      ));
+      setWorkoutLogs(logs.sort((a, b) => {
+        const dateA = a.date && typeof a.date.toDate === 'function' ? a.date.toDate() : new Date(a.date);
+        const dateB = b.date && typeof b.date.toDate === 'function' ? b.date.toDate() : new Date(b.date);
+        return dateB.getTime() - dateA.getTime();
+      }));
     } catch (error) {
       console.error('Error loading workout logs:', error);
       Alert.alert(
@@ -136,13 +138,11 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
     let totalReps = 0;
     let maxWeight = 0;
     let totalVolume = 0;  
-  
     exercise.sets.forEach(s => {
       totalReps += s.actualReps;
       maxWeight = Math.max(maxWeight, s.weight);
       totalVolume += s.weight * s.actualReps;
     });
-  
     return (
       <TouchableOpacity 
         style={styles.exerciseDetail}
@@ -156,7 +156,6 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
         <Text style={styles.exerciseStats}>Total Reps: {totalReps}</Text>
         <Text style={styles.exerciseStats}>Max Weight: {maxWeight}kg</Text>
         <Text style={styles.exerciseStats}>Total Volume: {totalVolume}kg</Text>
-        
         <View style={styles.setsContainer}>
           {exercise.sets.map((set, index) => (
             <View key={index} style={styles.setRow}>
@@ -178,8 +177,7 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
 
   const renderItem = ({ item, index }: { item: WorkoutLog; index: number }) => {
     const isExpanded = expandedIndexes.includes(index);
-    
-    const workoutDate = new Date(item.date);
+    const workoutDate = item.date && typeof item.date.toDate === 'function' ? item.date.toDate() : new Date(item.date);
     const formattedDate = workoutDate.toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -188,7 +186,6 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
       minute: '2-digit',
       hour12: true
     });
-
     return (
       <Animated.View
         style={[
@@ -246,9 +243,11 @@ const WorkoutHistoryScreen: React.FC<Props> = ({ route }) => {
         ) : (
           <FlatList
             ref={listRef}
-            data={workoutLogs.sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            )}
+            data={workoutLogs.sort((a, b) => {
+              const dateA = a.date && typeof a.date.toDate === 'function' ? a.date.toDate() : new Date(a.date);
+              const dateB = b.date && typeof b.date.toDate === 'function' ? b.date.toDate() : new Date(b.date);
+              return dateB.getTime() - dateA.getTime();
+            })}
             renderItem={renderItem}
             keyExtractor={(item, idx) => item.workoutId + '-' + idx}
             contentContainerStyle={styles.listContainer}
@@ -370,37 +369,37 @@ const styles = StyleSheet.create({
   exerciseStats: {
     fontSize: 14,
     color: '#DDD',
-    marginBottom: 4,
+    marginBottom: 4
   },
   setsContainer: {
     marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: 8,
+    paddingTop: 8
   },
   setRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 4
   },
   setText: {
     fontSize: 14,
-    color: '#DDD',
+    color: '#DDD'
   },
   analyticsIcon: {
     marginTop: 10,
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-end'
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#FFC371',
-  },
+    color: '#FFC371'
+  }
 });
 
 export default WorkoutHistoryScreen;

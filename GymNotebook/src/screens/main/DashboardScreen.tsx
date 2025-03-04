@@ -29,7 +29,7 @@ function DashboardScreen() {
   const { gradient, textColor, boxBackground, accent } = getThemeColors(theme);
   const [index, setIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { notifications, unreadCount } = useNotifications();
+  const { notifications, unreadCount, markAllAsRead } = useNotifications();
   const [isNotificationPanelVisible, setNotificationPanelVisible] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [routine, setRoutine] = useState([]);
@@ -85,6 +85,7 @@ function DashboardScreen() {
 
   function handleNotificationPress() {
     setNotificationPanelVisible(true);
+    markAllAsRead(); 
   }
 
   function renderRoutineDay(dayIndex) {
