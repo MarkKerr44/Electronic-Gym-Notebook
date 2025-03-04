@@ -121,8 +121,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.sha }}
-          name: "Android Release - ${{ github.sha }}"
+          tag: v${{ github.sha }}
+          name: "Android Release - v${{ github.sha }}"
           body: "From CI/CD"
           draft: false
           prerelease: false
