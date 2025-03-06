@@ -12,12 +12,14 @@ import {
   Modal,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import BottomNavBar from '../../components/BottomNavBar';
 import exercisesData from '../../../exercises.json';
+import { workoutService } from '../../services/workoutService';
 
 interface Exercise {
   id: string;
@@ -46,6 +48,10 @@ const ExerciseLibraryScreen: React.FC = () => {
     equipment: '',
     mechanic: '',
   });
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [workoutModalVisible, setWorkoutModalVisible] = useState(false);
+  const [userWorkouts, setUserWorkouts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigation = useNavigation();
 
@@ -97,18 +103,66 @@ const ExerciseLibraryScreen: React.FC = () => {
     setSelectedFilters({ force: '', level: '', equipment: '', mechanic: '' });
   };
 
+  const loadUserWorkouts = async () => {
+    setIsLoading(true);
+    try {
+      const workouts = await workoutService.getUserWorkouts();
+      setUserWorkouts(workouts);
+    } catch (error) {
+      console.error('Error loading workouts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddToWorkout = async (workoutId: string, workoutName: string) => {
+    if (!selectedExercise) return;
+
+    try {
+      const workout = await workoutService.getWorkoutById(workoutId);
+      if (!workout) return;
+
+      const updatedExercises = [
+        ...workout.exercises,
+        {
+          id: selectedExercise.id,
+          name: selectedExercise.name,
+          sets: 3,
+          reps: 10,
+          rest: 60,
+        },
+      ];
+
+      await workoutService.updateWorkout(workoutId, { exercises: updatedExercises });
+
+      Alert.alert('Success', `Added ${selectedExercise.name} to "${workoutName}"`, [{ text: 'OK' }]);
+
+      setWorkoutModalVisible(false);
+      setSelectedExercise(null);
+    } catch (error) {
+      console.error('Error adding exercise to workout:', error);
+      Alert.alert('Error', 'Failed to add exercise to workout');
+    }
+  };
+
   const renderExerciseItem = ({ item }: { item: Exercise }) => (
     <TouchableOpacity
       style={styles.exerciseItem}
-      onPress={() =>
-        navigation.navigate('ExerciseDetails', {
-          exerciseId: item.id,
-        })
-      }
+      onPress={() => navigation.navigate('ExerciseDetails', { exerciseId: item.id })}
     >
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName}>{item.name}</Text>
       </View>
+      <TouchableOpacity
+        style={styles.addToWorkoutButton}
+        onPress={() => {
+          setSelectedExercise(item);
+          loadUserWorkouts();
+          setWorkoutModalVisible(true);
+        }}
+      >
+        <MaterialIcons name="playlist-add" size={24} color="#FFC371" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -286,6 +340,60 @@ const ExerciseLibraryScreen: React.FC = () => {
             </View>
           </View>
         </Modal>
+
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={workoutModalVisible}
+          onRequestClose={() => setWorkoutModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.workoutModalContent}>
+              <Text style={styles.modalTitle}>Add {selectedExercise?.name} to Workout</Text>
+
+              {isLoading ? (
+                <ActivityIndicator size="large" color="#FFC371" />
+              ) : userWorkouts.length === 0 ? (
+                <View style={styles.emptyWorkoutsContainer}>
+                  <Text style={styles.emptyWorkoutsText}>You don't have any saved workouts yet.</Text>
+                  <TouchableOpacity
+                    style={styles.createWorkoutButton}
+                    onPress={() => {
+                      setWorkoutModalVisible(false);
+                      navigation.navigate('CreateWorkoutScreen');
+                    }}
+                  >
+                    <Text style={styles.createWorkoutButtonText}>Create a Workout</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <FlatList
+                  data={userWorkouts}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.workoutItem}
+                      onPress={() => handleAddToWorkout(item.id, item.name)}
+                    >
+                      <Text style={styles.workoutName}>{item.name}</Text>
+                      <Text style={styles.workoutExercisesCount}>{item.exercises.length} exercises</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setWorkoutModalVisible(false);
+                  setSelectedExercise(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -343,6 +451,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  addToWorkoutButton: {
+    marginLeft: 10,
+    padding: 10,
+  },
   activeFiltersContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -371,6 +483,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     width: '80%',
+    maxHeight: '80%',
+  },
+  workoutModalContent: {
+    backgroundColor: '#302b63',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
     maxHeight: '80%',
   },
   modalTitle: {
@@ -430,6 +549,56 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     color: '#fff',
+    fontSize: 16,
+  },
+  emptyWorkoutsContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyWorkoutsText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  createWorkoutButton: {
+    backgroundColor: '#FFC371',
+    borderRadius: 8,
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  createWorkoutButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  workoutItem: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 12,
+  },
+  workoutName: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  workoutExercisesCount: {
+    color: '#cccccc',
+    fontSize: 14,
+    marginTop: 5,
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
   },
 });
