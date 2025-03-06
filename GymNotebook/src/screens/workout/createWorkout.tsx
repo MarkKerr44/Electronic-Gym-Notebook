@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as RN from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -7,6 +7,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import { workoutService } from '../../services/workoutService';
+import ExerciseSelectionModal from '../../components/ExerciseSelectionModal';
 
 const {
   View,
@@ -74,6 +75,9 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
     mechanic: '',
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState<number | null>(null);
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
+  const deletionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -127,9 +131,44 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
     setIsAddModalVisible(false);
   };
 
-  const removeExercise = (index: number) => {
-    setSelectedExercises((prev) => prev.filter((_, i) => i !== index));
+  const removeExercise = (id: string) => {
+    Alert.alert(
+      "Remove Exercise",
+      "Are you sure you want to remove this exercise?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setExerciseToDelete(id);
+            
+            if (deletionTimeoutRef.current) {
+              clearTimeout(deletionTimeoutRef.current);
+            }
+            
+            deletionTimeoutRef.current = setTimeout(() => {
+              setSelectedExercises((current) => 
+                current.filter(exercise => exercise.id !== id)
+              );
+              setExerciseToDelete(null);
+            }, 100);
+          }
+        }
+      ]
+    );
   };
+
+  useEffect(() => {
+    return () => {
+      if (deletionTimeoutRef.current) {
+        clearTimeout(deletionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const calculateWorkoutStats = () => {
     const stats: { [key: string]: { primary: number; secondary: number; exercises: SelectedExercise[] } } = {};
@@ -171,8 +210,11 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
 
   const renderSelectedExercise = ({ item, index, drag }: { item: SelectedExercise; index: number; drag?: () => void }) => (
     <TouchableOpacity 
-      style={styles.exerciseCard} 
-      key={index}
+      style={[
+        styles.exerciseCard,
+        exerciseToDelete === item.id && styles.deletingExercise 
+      ]} 
+      key={item.id} 
       onPress={() => {
         setEditingExercise({ exercise: item, index });
         setTempSets(item.sets.toString());
@@ -191,11 +233,16 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
       <TouchableOpacity 
         onPress={(e) => {
           e.stopPropagation();
-          removeExercise(index);
+          removeExercise(item.id); 
         }} 
         style={styles.deleteButton}
+        disabled={exerciseToDelete === item.id}
       >
-        <MaterialIcons name="delete" size={24} color="#FF5F6D" />
+        <MaterialIcons 
+          name="delete" 
+          size={24} 
+          color={exerciseToDelete === item.id ? "#999" : "#FF5F6D"} 
+        />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -305,10 +352,13 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
           <Text style={styles.headerTitle}>Create Workout</Text>
           <View style={{ width: 30 }} />
         </View>
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          <SegmentedControl />
-          {viewMode === 'exercises' && (
+        
+        <SegmentedControl />
+        
+        {viewMode === 'exercises' && (
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.exercisesContainer}>
+              {/* Input fields for workout name */}
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Workout Name</Text>
                 <TextInput
@@ -319,6 +369,8 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
                   placeholderTextColor="#999"
                 />
               </View>
+              
+              {/* Default settings card */}
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Default Settings</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -357,30 +409,51 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
                   </View>
                 </View>
               </View>
+              
+              {/* Add Exercise button */}
               <TouchableOpacity style={styles.addExerciseButton} onPress={() => setIsAddModalVisible(true)}>
                 <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.addExerciseGradient}>
                   <MaterialIcons name="add-circle" size={30} color="#fff" />
                   <Text style={styles.addExerciseText}>Add Exercises</Text>
                 </LinearGradient>
               </TouchableOpacity>
+              
+              {/* Save Workout button */}
+              <TouchableOpacity
+                style={[
+                  styles.saveWorkoutButton,
+                  isSaving && { opacity: 0.7 }
+                ]}
+                onPress={handleSaveWorkout}
+                disabled={isSaving}
+              >
+                <Text style={styles.saveWorkoutButtonText}>
+                  {isSaving ? 'Saving...' : 'Save Workout'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-          {viewMode === 'view' && (
-            <View style={styles.exercisesContainer}>
-              <Text style={styles.sectionTitle}>Selected Exercises</Text>
-              {selectedExercises.length === 0 ? (
-                <Text style={styles.emptyText}>No exercises selected.</Text>
-              ) : (
-                <DraggableFlatList
-                  data={selectedExercises}
-                  renderItem={({ item, index, drag }) => renderSelectedExercise({ item, index, drag })}
-                  keyExtractor={(item) => item.id}
-                  onDragEnd={({ data }) => setSelectedExercises(data)}
-                />
-              )}
-            </View>
-          )}
-          {viewMode === 'stats' && (
+          </ScrollView>
+        )}
+        
+        {viewMode === 'view' && (
+          <View style={styles.viewContainer}>
+            <Text style={styles.sectionTitle}>Selected Exercises</Text>
+            {selectedExercises.length === 0 ? (
+              <Text style={styles.emptyText}>No exercises selected.</Text>
+            ) : (
+              <DraggableFlatList
+                data={selectedExercises}
+                renderItem={({ item, index, drag }) => renderSelectedExercise({ item, index, drag })}
+                keyExtractor={(item) => item.id}
+                onDragEnd={({ data }) => setSelectedExercises(data)}
+                contentContainerStyle={styles.exerciseListContainer}
+              />
+            )}
+          </View>
+        )}
+        
+        {viewMode === 'stats' && (
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
             <View style={styles.statsContainer}>
               <Text style={styles.sectionTitle}>Workout Stats</Text>
               {Object.keys(workoutStats).length === 0 ? (
@@ -396,252 +469,42 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
                 </View>
               )}
             </View>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.saveWorkoutButton,
-              isSaving && { opacity: 0.7 }
-            ]}
-            onPress={handleSaveWorkout}
-            disabled={isSaving}
-          >
-            <Text style={styles.saveWorkoutButtonText}>
-              {isSaving ? 'Saving...' : 'Save Workout'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-      <Modal visible={isAddModalVisible} transparent={true} animationType="slide">
-        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Exercises</Text>
-              <TouchableOpacity onPress={() => setIsAddModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.searchContainer}>
-              <MaterialIcons name="search" size={24} color="#999" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search exercises"
-                placeholderTextColor="#999"
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-              />
-              <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterButton}>
-                <MaterialIcons name="filter-list" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.activeFiltersContainer}>
-              {Object.entries(selectedFilters).map(
-                ([key, value]) =>
-                  value && (
-                    <View key={key} style={styles.activeFilter}>
-                      <Text style={styles.activeFilterText}>{value}</Text>
-                    </View>
-                  )
-              )}
-            </View>
-            {showFilters && (
-              <View style={styles.filterModalOverlay}>
-                <View style={styles.filterModalContent}>
-                  <View style={styles.filterModalHeader}>
-                    <Text style={styles.filterModalTitle}>Filter Exercises</Text>
-                    <TouchableOpacity onPress={() => setShowFilters(false)}>
-                      <MaterialIcons name="close" size={24} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={styles.filterScrollView}>
-                    {/* Force Filter */}
-                    <View style={styles.filterCategoryContainer}>
-                      <Text style={styles.filterCategoryTitle}>Force</Text>
-                      <View style={styles.filterOptionsRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('force', 'push') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('force', 'push')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('force', 'push') && styles.filterChipTextSelected
-                          ]}>Push</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('force', 'pull') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('force', 'pull')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('force', 'pull') && styles.filterChipTextSelected
-                          ]}>Pull</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Level Filter */}
-                    <View style={styles.filterCategoryContainer}>
-                      <Text style={styles.filterCategoryTitle}>Level</Text>
-                      <View style={styles.filterOptionsRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('level', 'beginner') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('level', 'beginner')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('level', 'beginner') && styles.filterChipTextSelected
-                          ]}>Beginner</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('level', 'intermediate') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('level', 'intermediate')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('level', 'intermediate') && styles.filterChipTextSelected
-                          ]}>Intermediate</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('level', 'advanced') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('level', 'advanced')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('level', 'advanced') && styles.filterChipTextSelected
-                          ]}>Advanced</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Equipment Filter */}
-                    <View style={styles.filterCategoryContainer}>
-                      <Text style={styles.filterCategoryTitle}>Equipment</Text>
-                      <View style={styles.filterOptionsRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('equipment', 'dumbbell') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('equipment', 'dumbbell')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('equipment', 'dumbbell') && styles.filterChipTextSelected
-                          ]}>Dumbbell</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('equipment', 'machine') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('equipment', 'machine')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('equipment', 'machine') && styles.filterChipTextSelected
-                          ]}>Machine</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Mechanic Filter */}
-                    <View style={styles.filterCategoryContainer}>
-                      <Text style={styles.filterCategoryTitle}>Mechanic</Text>
-                      <View style={styles.filterOptionsRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('mechanic', 'isolation') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('mechanic', 'isolation')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('mechanic', 'isolation') && styles.filterChipTextSelected
-                          ]}>Isolation</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.filterChip,
-                            isFilterSelected('mechanic', 'compound') && styles.filterChipSelected
-                          ]}
-                          onPress={() => toggleFilter('mechanic', 'compound')}
-                        >
-                          <Text style={[
-                            styles.filterChipText,
-                            isFilterSelected('mechanic', 'compound') && styles.filterChipTextSelected
-                          ]}>Compound</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </ScrollView>
-
-                  <View style={styles.filterActionButtons}>
-                    <TouchableOpacity 
-                      style={styles.clearFiltersButton} 
-                      onPress={clearFilters}
-                    >
-                      <Text style={styles.clearFiltersText}>Clear All</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.applyFiltersButton} 
-                      onPress={() => setShowFilters(false)}
-                    >
-                      <Text style={styles.applyFiltersText}>Apply Filters</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            )}
-            <FlatList
-              data={filteredExercises}
-              renderItem={({ item }) => {
-                const isSelected = selectedExercisesInModal.some((e) => e.id === item.id);
-                return (
-                  <TouchableOpacity
-                    style={[styles.exerciseItem, isSelected && styles.exerciseItemSelected]}
-                    onPress={() => {
-                      const exists = selectedExercisesInModal.find((e) => e.id === item.id);
-                      if (exists) {
-                        setSelectedExercisesInModal((prev) => prev.filter((e) => e.id !== item.id));
-                      } else {
-                        setSelectedExercisesInModal((prev) => [...prev, item]);
-                      }
-                    }}
-                  >
-                    <Text style={styles.exerciseName}>{item.name}</Text>
-                    <MaterialIcons
-                      name={isSelected ? "check-box" : "check-box-outline-blank"}
-                      size={24}
-                      color={isSelected ? "#FFC371" : "#ffffff"}
-                    />
-                  </TouchableOpacity>
-                );
-              }}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.modalListContainer}
-            />
-            <TouchableOpacity style={styles.addSelectedExercisesButton} onPress={addExercisesToWorkout}>
-              <Text style={styles.addSelectedExercisesButtonText}>Add {selectedExercisesInModal.length} Exercises</Text>
+            
+            {/* Save Workout button */}
+            <TouchableOpacity
+              style={[
+                styles.saveWorkoutButton,
+                isSaving && { opacity: 0.7 }
+              ]}
+              onPress={handleSaveWorkout}
+              disabled={isSaving}
+            >
+              <Text style={styles.saveWorkoutButtonText}>
+                {isSaving ? 'Saving...' : 'Save Workout'}
+              </Text>
             </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+      
+      {/* Rest of your modals remain the same */}
+      <ExerciseSelectionModal
+        visible={isAddModalVisible}
+        onClose={() => setIsAddModalVisible(false)}
+        onAddExercises={(exercises) => {
+          const newSelected = exercises.map((ex) => ({
+            ...ex,
+            sets: parseInt(defaultSets) || 3,
+            reps: parseInt(defaultReps) || 10,
+            rest: parseInt(defaultRest) || 60
+          }));
+          setSelectedExercises((prev) => [...prev, ...newSelected]);
+          setIsAddModalVisible(false);
+        }}
+        defaultSets={defaultSets}
+        defaultReps={defaultReps}
+        defaultRest={defaultRest}
+      />
       <Modal visible={isEditModalVisible} transparent={true} animationType="slide">
         <KeyboardAvoidingView 
           style={styles.modalContainer} 
@@ -725,7 +588,15 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 20, marginBottom: 20 },
   sectionTitle: { fontSize: 24, color: '#FFC371', marginBottom: 10, fontWeight: 'bold' },
   emptyText: { color: '#ffffff', fontSize: 16 },
-  exerciseCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: 15, borderRadius: 8, marginBottom: 10 },
+  exerciseCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    padding: 15, 
+    borderRadius: 8, 
+    marginBottom: 10, 
+    marginHorizontal: 20 
+  },
   exerciseInfo: { flex: 1 },
   exerciseName: { fontSize: 18, color: '#ffffff', fontWeight: 'bold' },
   exerciseDetails: { fontSize: 14, color: '#cccccc' },
@@ -874,6 +745,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  viewContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  exerciseListContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 100, 
+  },
+  deletingExercise: {
+    opacity: 0.5,
+    backgroundColor: 'rgba(255,95,109,0.2)',
   },
 });
 
