@@ -79,7 +79,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
     if (searchTerm === '') {
       let filtered = exercisesData;
       
-      // Apply filters
       if (selectedFilters.force) {
         filtered = filtered.filter((exercise) => exercise.force === selectedFilters.force);
       }
@@ -99,7 +98,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
         ex.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
-      // Apply filters
       if (selectedFilters.force) {
         filtered = filtered.filter((exercise) => exercise.force === selectedFilters.force);
       }
@@ -324,30 +322,39 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Default Settings</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <TextInput
-                    style={[styles.workoutNameInput, { flex: 1, marginRight: 5 }]}
-                    value={defaultSets}
-                    onChangeText={setDefaultSets}
-                    keyboardType="numeric"
-                    placeholder="Sets"
-                    placeholderTextColor="#999"
-                  />
-                  <TextInput
-                    style={[styles.workoutNameInput, { flex: 1, marginHorizontal: 5 }]}
-                    value={defaultReps}
-                    onChangeText={setDefaultReps}
-                    keyboardType="numeric"
-                    placeholder="Reps"
-                    placeholderTextColor="#999"
-                  />
-                  <TextInput
-                    style={[styles.workoutNameInput, { flex: 1, marginLeft: 5 }]}
-                    value={defaultRest}
-                    onChangeText={setDefaultRest}
-                    keyboardType="numeric"
-                    placeholder="Rest"
-                    placeholderTextColor="#999"
-                  />
+                  <View style={{ flex: 1, marginRight: 5 }}>
+                    <Text style={styles.fieldLabel}>Sets</Text>
+                    <TextInput
+                      style={styles.workoutNameInput}
+                      value={defaultSets}
+                      onChangeText={setDefaultSets}
+                      keyboardType="numeric"
+                      placeholder="3"
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginHorizontal: 5 }}>
+                    <Text style={styles.fieldLabel}>Reps</Text>
+                    <TextInput
+                      style={styles.workoutNameInput}
+                      value={defaultReps}
+                      onChangeText={setDefaultReps}
+                      keyboardType="numeric"
+                      placeholder="10"
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 5 }}>
+                    <Text style={styles.fieldLabel}>Rest (sec)</Text>
+                    <TextInput
+                      style={styles.workoutNameInput}
+                      value={defaultRest}
+                      onChangeText={setDefaultRest}
+                      keyboardType="numeric"
+                      placeholder="60"
+                      placeholderTextColor="#999"
+                    />
+                  </View>
                 </View>
               </View>
               <TouchableOpacity style={styles.addExerciseButton} onPress={() => setIsAddModalVisible(true)}>
@@ -437,89 +444,169 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
               )}
             </View>
             {showFilters && (
-              <ScrollView style={styles.filtersSection}>
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Force:</Text>
-                  <View style={styles.filterButtonGroup}>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('force', 'push') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('force', 'push')}
-                    >
-                      <Text style={styles.filterText}>Push</Text>
+              <View style={styles.filterModalOverlay}>
+                <View style={styles.filterModalContent}>
+                  <View style={styles.filterModalHeader}>
+                    <Text style={styles.filterModalTitle}>Filter Exercises</Text>
+                    <TouchableOpacity onPress={() => setShowFilters(false)}>
+                      <MaterialIcons name="close" size={24} color="#ffffff" />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('force', 'pull') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('force', 'pull')}
+                  </View>
+
+                  <ScrollView style={styles.filterScrollView}>
+                    {/* Force Filter */}
+                    <View style={styles.filterCategoryContainer}>
+                      <Text style={styles.filterCategoryTitle}>Force</Text>
+                      <View style={styles.filterOptionsRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('force', 'push') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('force', 'push')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('force', 'push') && styles.filterChipTextSelected
+                          ]}>Push</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('force', 'pull') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('force', 'pull')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('force', 'pull') && styles.filterChipTextSelected
+                          ]}>Pull</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Level Filter */}
+                    <View style={styles.filterCategoryContainer}>
+                      <Text style={styles.filterCategoryTitle}>Level</Text>
+                      <View style={styles.filterOptionsRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('level', 'beginner') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('level', 'beginner')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('level', 'beginner') && styles.filterChipTextSelected
+                          ]}>Beginner</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('level', 'intermediate') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('level', 'intermediate')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('level', 'intermediate') && styles.filterChipTextSelected
+                          ]}>Intermediate</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('level', 'advanced') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('level', 'advanced')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('level', 'advanced') && styles.filterChipTextSelected
+                          ]}>Advanced</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Equipment Filter */}
+                    <View style={styles.filterCategoryContainer}>
+                      <Text style={styles.filterCategoryTitle}>Equipment</Text>
+                      <View style={styles.filterOptionsRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('equipment', 'dumbbell') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('equipment', 'dumbbell')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('equipment', 'dumbbell') && styles.filterChipTextSelected
+                          ]}>Dumbbell</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('equipment', 'machine') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('equipment', 'machine')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('equipment', 'machine') && styles.filterChipTextSelected
+                          ]}>Machine</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Mechanic Filter */}
+                    <View style={styles.filterCategoryContainer}>
+                      <Text style={styles.filterCategoryTitle}>Mechanic</Text>
+                      <View style={styles.filterOptionsRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('mechanic', 'isolation') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('mechanic', 'isolation')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('mechanic', 'isolation') && styles.filterChipTextSelected
+                          ]}>Isolation</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            isFilterSelected('mechanic', 'compound') && styles.filterChipSelected
+                          ]}
+                          onPress={() => toggleFilter('mechanic', 'compound')}
+                        >
+                          <Text style={[
+                            styles.filterChipText,
+                            isFilterSelected('mechanic', 'compound') && styles.filterChipTextSelected
+                          ]}>Compound</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.filterActionButtons}>
+                    <TouchableOpacity 
+                      style={styles.clearFiltersButton} 
+                      onPress={clearFilters}
                     >
-                      <Text style={styles.filterText}>Pull</Text>
+                      <Text style={styles.clearFiltersText}>Clear All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.applyFiltersButton} 
+                      onPress={() => setShowFilters(false)}
+                    >
+                      <Text style={styles.applyFiltersText}>Apply Filters</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Level:</Text>
-                  <View style={styles.filterButtonGroup}>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('level', 'beginner') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('level', 'beginner')}
-                    >
-                      <Text style={styles.filterText}>Beginner</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('level', 'intermediate') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('level', 'intermediate')}
-                    >
-                      <Text style={styles.filterText}>Intermediate</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('level', 'advanced') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('level', 'advanced')}
-                    >
-                      <Text style={styles.filterText}>Advanced</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Equipment:</Text>
-                  <View style={styles.filterButtonGroup}>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('equipment', 'dumbbell') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('equipment', 'dumbbell')}
-                    >
-                      <Text style={styles.filterText}>Dumbbell</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('equipment', 'machine') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('equipment', 'machine')}
-                    >
-                      <Text style={styles.filterText}>Machine</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Mechanic:</Text>
-                  <View style={styles.filterButtonGroup}>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('mechanic', 'isolation') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('mechanic', 'isolation')}
-                    >
-                      <Text style={styles.filterText}>Isolation</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.filterOption, isFilterSelected('mechanic', 'compound') && styles.selectedFilterOption]}
-                      onPress={() => toggleFilter('mechanic', 'compound')}
-                    >
-                      <Text style={styles.filterText}>Compound</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-                  <Text style={styles.clearFiltersText}>Clear Filters</Text>
-                </TouchableOpacity>
-              </ScrollView>
+              </View>
             )}
             <FlatList
               data={filteredExercises}
@@ -683,7 +770,111 @@ const styles = StyleSheet.create({
   exerciseItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, marginBottom: 10 },
   exerciseItemSelected: { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
   addSelectedExercisesButton: { backgroundColor: '#FF5F6D', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  addSelectedExercisesButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' }
+  addSelectedExercisesButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  filterModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterModalContent: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#333',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  filterModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFC371',
+  },
+  filterScrollView: {
+    maxHeight: '70%',
+  },
+  filterCategoryContainer: {
+    marginBottom: 20,
+  },
+  filterCategoryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 12,
+  },
+  filterOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  filterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  filterChipSelected: {
+    backgroundColor: '#FFC371',
+    borderColor: '#FF5F6D',
+  },
+  filterChipText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  filterChipTextSelected: {
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  filterActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  clearFiltersButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: 'rgba(255,95,109,0.2)',
+    borderRadius: 25,
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#FF5F6D',
+  },
+  applyFiltersButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#FF5F6D',
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  clearFiltersText: {
+    color: '#FF5F6D',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  applyFiltersText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
 
 export default CreateWorkoutScreen;
