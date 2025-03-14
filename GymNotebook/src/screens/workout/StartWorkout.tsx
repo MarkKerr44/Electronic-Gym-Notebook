@@ -71,6 +71,7 @@ export default function StartWorkoutScreen() {
   const notificationService = useNotificationService();
   const [lastSetWeight, setLastSetWeight] = useState<number>(0);
   const [lastSetReps, setLastSetReps] = useState<number>(0);
+  const [weightModified, setWeightModified] = useState(false);
 
   const getPreviousBest = async (exerciseId: string): Promise<{ weight: number, reps: number }> => {
     try {
@@ -256,12 +257,14 @@ const handleCompleteSet = () => {
     if (!workout) return;
     if (pendingActionRef.current === 'SAME_EXERCISE') {
       setCurrentSetNumber(prev => prev + 1);
+      setWeightModified(false); 
     } else if (pendingActionRef.current === 'NEXT_EXERCISE') {
       setCurrentExerciseIndex(prev => prev + 1);
       setCurrentSetNumber(1);
       setWeight('');
       setLastSetWeight(0);
       setLastSetReps(0);
+      setWeightModified(false);
     }
     pendingActionRef.current = null;
   };
@@ -369,10 +372,17 @@ const handleCompleteSet = () => {
                   <TextInput
                     style={styles.input}
                     keyboardType="numeric"
-                    value={weight === '' ? (lastSetWeight > 0 ? lastSetWeight.toString() : '') : weight}
+                    value={weightModified ? weight : (weight || (lastSetWeight > 0 ? lastSetWeight.toString() : ''))}
                     onChangeText={(text) => {
                       const cleanedText = text.replace(/^0+/, '');
                       setWeight(cleanedText);
+                      setWeightModified(true); 
+                    }}
+                    onFocus={() => {
+                      if (!weightModified) {
+                        setWeight(lastSetWeight > 0 ? lastSetWeight.toString() : '');
+                        setWeightModified(true);
+                      }
                     }}
                     placeholder="0"
                     placeholderTextColor="#999"

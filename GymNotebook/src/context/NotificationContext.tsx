@@ -89,7 +89,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         addNotification, 
         markAsRead, 
         clearNotifications,
-        markAllAsRead, // Add this line
+        markAllAsRead, 
         unreadCount 
       }}
     >
