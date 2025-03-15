@@ -44,6 +44,8 @@ interface ExerciseSelectionModalProps {
   visible: boolean;
   onClose: () => void;
   onAddExercises: (exercises: Exercise[]) => void;
+  onToggleExercise?: (exerciseId: string, isSelected: boolean) => void;
+  existingExerciseIds?: Set<string>;
   defaultSets: string;
   defaultReps: string;
   defaultRest: string;
@@ -53,6 +55,8 @@ const ExerciseSelectionModal: React.FC<ExerciseSelectionModalProps> = ({
   visible,
   onClose,
   onAddExercises,
+  onToggleExercise,
+  existingExerciseIds = new Set(),
   defaultSets,
   defaultReps,
   defaultRest
@@ -179,6 +183,24 @@ const ExerciseSelectionModal: React.FC<ExerciseSelectionModalProps> = ({
   const handleAddExercises = () => {
     onAddExercises(selectedExercises);
   };
+
+  const handleExerciseSelection = (exercise: Exercise) => {
+    setSelectedExercises(prev => {
+      const isSelected = prev.some(ex => ex.id === exercise.id);
+      
+      if (onToggleExercise) {
+        onToggleExercise(exercise.id, !isSelected);
+      }
+      
+      if (isSelected) {
+        return prev.filter(ex => ex.id !== exercise.id);
+      } else {
+        return [...prev, exercise];
+      }
+    });
+  };
+
+  const isExistingExercise = (exerciseId: string) => existingExerciseIds.has(exerciseId);
 
   return (
     <Modal visible={visible} transparent={true} animationType="slide">
@@ -399,19 +421,15 @@ const ExerciseSelectionModal: React.FC<ExerciseSelectionModalProps> = ({
                   style={[
                     styles.exerciseItem, 
                     isSelected && styles.exerciseItemSelected,
-                    isCustom && styles.customExerciseItem
+                    isCustom && styles.customExerciseItem,
+                    isExistingExercise(item.id) && styles.exerciseItemAlreadyAdded
                   ]}
-                  onPress={() => {
-                    const exists = selectedExercises.find((e) => e.id === item.id);
-                    if (exists) {
-                      setSelectedExercises((prev) => prev.filter((e) => e.id !== item.id));
-                    } else {
-                      setSelectedExercises((prev) => [...prev, item]);
-                    }
-                  }}
+                  onPress={() => handleExerciseSelection(item)}
                 >
                   <View style={styles.exerciseNameContainer}>
-                    <Text style={styles.exerciseName}>{item.name}</Text>
+                    <Text style={[styles.exerciseName, isExistingExercise(item.id) && styles.exerciseNameAlreadyAdded]}>
+                      {item.name} {isExistingExercise(item.id) ? '(Already added)' : ''}
+                    </Text>
                     {isCustom && <Text style={styles.customBadge}>Custom</Text>}
                   </View>
                   <MaterialIcons
@@ -767,6 +785,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  exerciseItemAlreadyAdded: {
+    borderColor: '#FFC371',
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#6FCC75',
+  },
+  exerciseNameAlreadyAdded: {
+    color: '#FFC371',
+    fontStyle: 'italic',
+    color: '#6FCC75',
   },
 });
 

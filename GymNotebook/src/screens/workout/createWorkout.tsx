@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as RN from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -78,6 +78,7 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
   const [pendingDeletion, setPendingDeletion] = useState<number | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const deletionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [newlySelectedExercises, setNewlySelectedExercises] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -342,6 +343,23 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
     setSelectedFilters({ force: '', level: '', equipment: '', mechanic: '' });
   };
 
+  const handleExerciseSelectionModalOpen = useCallback(() => {
+    setNewlySelectedExercises(new Set());
+    setIsAddModalVisible(true);
+  }, []);
+
+  const handleExerciseToggle = useCallback((exerciseId: string, isSelected: boolean) => {
+    setNewlySelectedExercises(prev => {
+      const updated = new Set(prev);
+      if (isSelected) {
+        updated.add(exerciseId);
+      } else {
+        updated.delete(exerciseId);
+      }
+      return updated;
+    });
+  }, []);
+
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
       <SafeAreaView style={styles.safeArea}>
@@ -358,7 +376,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
         {viewMode === 'exercises' && (
           <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <View style={styles.exercisesContainer}>
-              {/* Input fields for workout name */}
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Workout Name</Text>
                 <TextInput
@@ -370,7 +387,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
                 />
               </View>
               
-              {/* Default settings card */}
               <View style={styles.inputCard}>
                 <Text style={styles.inputLabel}>Default Settings</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -410,15 +426,13 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
                 </View>
               </View>
               
-              {/* Add Exercise button */}
-              <TouchableOpacity style={styles.addExerciseButton} onPress={() => setIsAddModalVisible(true)}>
+              <TouchableOpacity style={styles.addExerciseButton} onPress={handleExerciseSelectionModalOpen}>
                 <LinearGradient colors={['#FF5F6D', '#FFC371']} style={styles.addExerciseGradient}>
                   <MaterialIcons name="add-circle" size={30} color="#fff" />
                   <Text style={styles.addExerciseText}>Add Exercises</Text>
                 </LinearGradient>
               </TouchableOpacity>
               
-              {/* Save Workout button */}
               <TouchableOpacity
                 style={[
                   styles.saveWorkoutButton,
@@ -470,7 +484,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
               )}
             </View>
             
-            {/* Save Workout button */}
             <TouchableOpacity
               style={[
                 styles.saveWorkoutButton,
@@ -487,17 +500,25 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
         )}
       </SafeAreaView>
       
-      {/* Rest of your modals remain the same */}
+
       <ExerciseSelectionModal
         visible={isAddModalVisible}
         onClose={() => setIsAddModalVisible(false)}
+        onToggleExercise={handleExerciseToggle}
+        existingExerciseIds={new Set(selectedExercises.map(ex => ex.id))}
         onAddExercises={(exercises) => {
-          const newSelected = exercises.map((ex) => ({
+          const uniqueExercises = exercises.filter(ex => 
+            newlySelectedExercises.has(ex.id) && 
+            !selectedExercises.some(existing => existing.id === ex.id)
+          );
+          
+          const newSelected = uniqueExercises.map((ex) => ({
             ...ex,
             sets: parseInt(defaultSets) || 3,
             reps: parseInt(defaultReps) || 10,
             rest: parseInt(defaultRest) || 60
           }));
+          
           setSelectedExercises((prev) => [...prev, ...newSelected]);
           setIsAddModalVisible(false);
         }}

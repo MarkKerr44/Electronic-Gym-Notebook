@@ -19,9 +19,21 @@ import NotificationPanel from '../../components/NotificationPanel';
 import { ThemeContext } from '../../context/ThemeProvider';
 import { getThemeColors } from '../../context/themeHelpers';
 import { useNotifications } from '../../context/NotificationContext';
+import { workoutService } from '../../services/workoutService';
 
 const { width } = Dimensions.get('window');
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+interface DayWorkout {
+  name: string;
+  status: 'scheduled' | 'completed' | 'missed';
+  workoutLogId?: string;
+}
+
+interface WorkoutReference {
+  id: string;
+  name: string;
+}
 
 function DashboardScreen() {
   const navigation = useNavigation();
@@ -34,6 +46,9 @@ function DashboardScreen() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [routine, setRoutine] = useState([]);
   const [nextWorkout, setNextWorkout] = useState('');
+  const [calendarWorkouts, setCalendarWorkouts] = useState<{[date: string]: DayWorkout[]}>({});
+  const [nextWorkoutId, setNextWorkoutId] = useState<string | null>(null);
+  const [weekDays, setWeekDays] = useState<{label: string, date: Date}[]>([]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -41,46 +56,164 @@ function DashboardScreen() {
       duration: 800,
       useNativeDriver: true,
     }).start();
-    setShowOnboarding(true);
+    
+    AsyncStorage.getItem('hasOnboarded').then(value => {
+      if (value !== 'true') {
+        setShowOnboarding(true);
+      }
+    }).catch(() => {
+      setShowOnboarding(true);
+    });
+    
     loadRoutine();
+  }, []);
+
+  useEffect(() => {
+    const generateWeekDays = () => {
+      const today = new Date();
+      const days = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(today.getDate() + i);
+        
+        days.push({
+          label: DAYS[date.getDay()], 
+          date: new Date(date) 
+        });
+      }
+      
+      setWeekDays(days);
+    };
+    
+    generateWeekDays();
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    const timeUntilMidnight = midnight.getTime() - new Date().getTime();
+    
+    const timer = setTimeout(() => {
+      generateWeekDays();
+    }, timeUntilMidnight);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   async function loadRoutine() {
     try {
-      const stored = await AsyncStorage.getItem('userRoutine');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setRoutine(parsed);
-        setNextWorkout(calculateNextWorkout(parsed));
-      } else {
-        setRoutine([]);
-        setNextWorkout('No upcoming workout set');
+      let userWorkouts: WorkoutReference[] = [];
+      
+      try {
+        const firestoreWorkouts = await workoutService.getUserWorkouts();
+        if (firestoreWorkouts && firestoreWorkouts.length > 0) {
+          userWorkouts = firestoreWorkouts.map(workout => ({
+            id: workout.id,
+            name: workout.name
+          }));
+        }
+      } catch (firestoreError) {
+        console.log('Could not load workouts from Firestore:', firestoreError);
       }
-    } catch {
+      
+      const calendarData = await AsyncStorage.getItem('allCalendarWorkouts');
+      let parsedCalendar = {};
+      
+      if (calendarData) {
+        parsedCalendar = JSON.parse(calendarData);
+        setCalendarWorkouts(parsedCalendar);
+      }
+      
+      if (userWorkouts.length > 0) {
+        setRoutine(userWorkouts);
+        const nextWorkoutInfo = calculateNextWorkout(
+          userWorkouts,
+          parsedCalendar
+        );
+        setNextWorkout(nextWorkoutInfo);
+      } else {
+        const stored = await AsyncStorage.getItem('userRoutine');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setRoutine(parsed);
+          
+          const nextWorkoutInfo = calculateNextWorkout(
+            parsed,
+            parsedCalendar
+          );
+          setNextWorkout(nextWorkoutInfo);
+        } else {
+          setRoutine([]);
+          setNextWorkout('No upcoming workout set');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading routine data:', error);
       setRoutine([]);
+      setCalendarWorkouts({});
       setNextWorkout('No upcoming workout set');
     }
   }
 
-  function calculateNextWorkout(r) {
-    const todayIndex = new Date().getDay();
-    for (let i = 0; i < 7; i++) {
-      const checkIndex = (todayIndex + i) % 7;
-      if (r[checkIndex] && r[checkIndex].trim().length > 0) {
-        return `${DAYS[checkIndex]}: ${r[checkIndex]}`;
+  function calculateNextWorkout(basicRoutine: WorkoutReference[], calendarData: {[date: string]: DayWorkout[]}) {
+    const today = new Date();
+    const todayString = formatDate(today);
+    
+    if (calendarData[todayString]?.some(workout => 
+        workout.status === 'scheduled' && workout.name !== 'Rest')) {
+      const todayWorkouts = calendarData[todayString]
+        .filter(w => w.status === 'scheduled' && w.name !== 'Rest');
+      
+      if (todayWorkouts.length > 0) {
+        const firstWorkout = todayWorkouts[0];
+        setNextWorkoutId(firstWorkout.id);
+        return `Today: ${todayWorkouts.map(w => w.name).join(', ')}`;
       }
     }
+    
+    for (let i = 1; i <= 30; i++) {
+      const nextDate = new Date();
+      nextDate.setDate(today.getDate() + i);
+      const dateString = formatDate(nextDate);
+      
+      if (calendarData[dateString]?.some(workout => 
+          workout.status === 'scheduled' && workout.name !== 'Rest')) {
+        const nextWorkouts = calendarData[dateString]
+          .filter(w => w.status === 'scheduled' && w.name !== 'Rest');
+        
+        if (nextWorkouts.length > 0) {
+          const firstWorkout = nextWorkouts[0];
+          setNextWorkoutId(firstWorkout.id);
+          
+          const formattedDate = nextDate.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+          });
+          
+          return `${formattedDate}: ${nextWorkouts.map(w => w.name).join(', ')}`;
+        }
+      }
+    }
+    
+    if (basicRoutine && basicRoutine.length > 0) {
+      const todayIndex = today.getDay();
+      for (let i = 0; i < 7; i++) {
+        const checkIndex = (todayIndex + i) % 7;
+        if (basicRoutine[checkIndex] && basicRoutine[checkIndex].name && basicRoutine[checkIndex].name !== 'Rest') {
+          setNextWorkoutId(basicRoutine[checkIndex].id);
+          return `${DAYS[checkIndex]}: ${basicRoutine[checkIndex].name}`;
+        }
+      }
+    }
+    
+    setNextWorkoutId(null);
     return 'No upcoming workout set';
   }
-
-  async function handleOnboardingChoice(accepted) {
-    setShowOnboarding(false);
-    try {
-      await AsyncStorage.setItem('hasOnboarded', 'true');
-    } catch {}
-    if (accepted) {
-      navigation.navigate('UserProfileScreen');
-    }
+  
+  function formatDate(date: Date) {
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   function handleNotificationPress() {
@@ -88,11 +221,54 @@ function DashboardScreen() {
     markAllAsRead(); 
   }
 
-  function renderRoutineDay(dayIndex) {
-    if (routine.length === 7 && routine[dayIndex]) {
-      return routine[dayIndex].trim().length > 0 ? routine[dayIndex] : 'Off Day';
+  function renderRoutineDay(day: {label: string, date: Date}) {
+    const dateString = formatDate(day.date);
+    
+    if (calendarWorkouts[dateString]?.length > 0) {
+      const workouts = calendarWorkouts[dateString]
+        .filter(w => w.name !== 'Rest')
+        .map(w => w.name);
+      
+      if (workouts.length > 0) {
+        if (workouts.length > 1) {
+          return `${workouts.length} workouts`;
+        }
+        return workouts[0];
+      } else {
+        return calendarWorkouts[dateString].some(w => w.name === 'Rest') 
+          ? 'Rest Day' 
+          : 'Off Day';
+      }
     }
+    
+    if (routine.length === 7) {
+      const dayOfWeek = day.date.getDay(); 
+      if (routine[dayOfWeek] && routine[dayOfWeek].name) {
+        return routine[dayOfWeek].name;
+      }
+    }
+    
     return 'Not Set';
+  }
+
+  function handleAsync(asyncFn: () => Promise<any>) {
+    return () => {
+      try {
+        asyncFn();
+      } catch (error) {
+        console.error('Error in async handler:', error);
+      }
+    };
+  }
+
+  async function handleOnboardingChoice(accepted: boolean) {
+    setShowOnboarding(false);
+    try {
+      await AsyncStorage.setItem('hasOnboarded', 'true');
+    } catch {}
+    if (accepted) {
+      navigation.navigate('UserProfileScreen');
+    }
   }
 
   return (
@@ -122,29 +298,53 @@ function DashboardScreen() {
               <View style={[styles.calendarContainer, { backgroundColor: boxBackground }]}>
                 <Text style={[styles.calendarTitle, { color: textColor }]}>Your Routine This Week</Text>
                 <View style={styles.dayRow}>
-                  {DAYS.map((day, i) => (
-                    <View key={day} style={styles.dayCard}>
-                      <Text style={[styles.dayName, { color: textColor }]}>{day}</Text>
-                      <Text style={[styles.dayWorkout, { color: textColor }]}>{renderRoutineDay(i)}</Text>
+                  {weekDays.map((day, i) => (
+                    <View key={i} style={styles.dayCard}>
+                      <Text style={[styles.dayName, { color: textColor }]}>{day.label}</Text>
+                      <Text 
+                        style={[
+                          styles.dayWorkout, 
+                          { color: textColor },
+                          i === 0 && styles.todayWorkout 
+                        ]} 
+                        numberOfLines={2} 
+                        ellipsizeMode="tail"
+                      >
+                        {renderRoutineDay(day)}
+                      </Text>
                     </View>
                   ))}
                 </View>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.setRoutineButton, { backgroundColor: accent }]} onPress={() => navigation.navigate('RoutineSetupScreen')}>
+            <TouchableOpacity 
+              style={[styles.setRoutineButton, { backgroundColor: accent }]} 
+              onPress={() => navigation.navigate('RoutineSetupScreen')}
+            >
               <Text style={[styles.setRoutineButtonText, { color: '#ffffff' }]}>Set Routine</Text>
             </TouchableOpacity>
             <View style={[styles.upcomingWorkoutContainer, { backgroundColor: boxBackground }]}>
               <Text style={[styles.upcomingTitle, { color: textColor }]}>Next Workout</Text>
               <Text style={[styles.upcomingWorkoutText, { color: textColor }]}>{nextWorkout}</Text>
-              <TouchableOpacity style={[styles.startButton, { backgroundColor: accent }]} onPress={() => {
-                  if (nextWorkout === 'No upcoming workout set') return;
-                  navigation.navigate('WorkoutDetailScreen');
+              <TouchableOpacity 
+                style={[
+                  styles.startButton, 
+                  { 
+                    backgroundColor: accent,
+                    opacity: nextWorkout === 'No upcoming workout set' ? 0.5 : 1 
+                  }
+                ]} 
+                onPress={() => {
+                  if (nextWorkout === 'No upcoming workout set' || !nextWorkoutId) return;
+                  navigation.navigate('WorkoutDetails', { workoutId: nextWorkoutId });
                 }}>
                 <Text style={[styles.startButtonText, { color: '#ffffff' }]}>View Workout</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={[styles.weightTrackerButton, { backgroundColor: accent }]} onPress={() => navigation.navigate('WeightTrackerScreen')}>
+            <TouchableOpacity 
+              style={[styles.weightTrackerButton, { backgroundColor: accent }]} 
+              onPress={() => navigation.navigate('WeightTrackerScreen')}
+            >
               <Text style={[styles.weightTrackerButtonText, { color: '#ffffff' }]}>Go to Weight Tracker</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -155,12 +355,20 @@ function DashboardScreen() {
         <Modal visible={showOnboarding} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContainer, { backgroundColor: '#333333' }]}>
-              <Text style={[styles.modalText, { color: '#ffffff' }]}>It's your first time here! Would you like to enter your info? (recommended)</Text>
+              <Text style={[styles.modalText, { color: '#ffffff' }]}>
+                It's your first time here! Would you like to enter your info? (recommended)
+              </Text>
               <View style={styles.modalButtonRow}>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]} onPress={() => handleOnboardingChoice(true)}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: accent }]} 
+                  onPress={handleAsync(() => handleOnboardingChoice(true))}
+                >
                   <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>Yes</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: accent }]} onPress={() => handleOnboardingChoice(false)}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: accent }]} 
+                  onPress={handleAsync(() => handleOnboardingChoice(false))}
+                >
                   <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>No</Text>
                 </TouchableOpacity>
               </View>
@@ -188,7 +396,8 @@ const styles = StyleSheet.create({
   dayRow: { flexDirection: 'row', justifyContent: 'space-between' },
   dayCard: { width: 45, alignItems: 'center', marginBottom: 10 },
   dayName: { fontSize: 14, fontWeight: 'bold' },
-  dayWorkout: { fontSize: 12, marginTop: 4, textAlign: 'center' },
+  dayWorkout: { fontSize: 12, marginTop: 4, textAlign: 'center', maxWidth: 45, height: 32 },
+  todayWorkout: { fontWeight: 'bold', color: '#FFC371' },
   setRoutineButton: { borderRadius: 8, paddingVertical: 10, paddingHorizontal: 20, marginTop: 20, alignSelf: 'center' },
   setRoutineButtonText: { fontSize: 16, fontWeight: '600' },
   upcomingWorkoutContainer: { borderRadius: 12, padding: 20, marginTop: 20, alignItems: 'center' },

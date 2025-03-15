@@ -9,31 +9,39 @@ import {
   Alert,
   Dimensions,
   Modal,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { workoutService } from '../../services/workoutService';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 type RoutineType = 'fixedDays' | 'cycle';
 
+interface WorkoutReference {
+  id: string;
+  name: string;
+}
+
 interface RoutineTemplate {
   name: string;
   type: RoutineType;
-  schedule: string[];
-  cycleItems?: string[];
+  schedule: WorkoutReference[];
+  cycleItems?: WorkoutReference[];
 }
 
 function RoutineSetupScreen() {
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
   const [routineType, setRoutineType] = useState<RoutineType>('fixedDays');
   const [routineName, setRoutineName] = useState('');
-  const [schedule, setSchedule] = useState<string[]>(Array(7).fill(''));
-  const [cycleItems, setCycleItems] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<WorkoutReference[]>(Array(7).fill(null));
+  const [cycleItems, setCycleItems] = useState<WorkoutReference[]>([]);
   const [allWorkouts, setAllWorkouts] = useState<{ id: string; name: string }[]>([]);
   const [workoutModalVisible, setWorkoutModalVisible] = useState(false);
   const [workoutSelectionMode, setWorkoutSelectionMode] = useState<'day' | 'cycle'>('day');
@@ -44,17 +52,34 @@ function RoutineSetupScreen() {
   }, []);
 
   async function loadWorkouts() {
+    setLoading(true);
     try {
-      const existingWorkouts = await AsyncStorage.getItem('workouts');
-      if (existingWorkouts) {
-        setAllWorkouts(JSON.parse(existingWorkouts));
+      const fetchedWorkouts = await workoutService.getUserWorkouts();
+      console.log('Fetched workouts from Firestore:', fetchedWorkouts);
+      
+      if (fetchedWorkouts && fetchedWorkouts.length > 0) {
+        const workoutsToUse = fetchedWorkouts.map(workout => ({
+          id: workout.id || String(Math.random()),
+          name: workout.name
+        }));
+        
+        setAllWorkouts(workoutsToUse);
+      } else {
+        console.log('No workouts found in Firestore');
+        setAllWorkouts([]);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error loading workouts from Firestore:', error);
+      setAllWorkouts([]);
+      Alert.alert('Error', 'Failed to load your workouts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleRoutineTypeChange(type: RoutineType) {
     setRoutineType(type);
-    setSchedule(Array(7).fill(''));
+    setSchedule(Array(7).fill(null));
     setCycleItems([]);
   }
 
@@ -64,13 +89,24 @@ function RoutineSetupScreen() {
     setWorkoutModalVisible(true);
   }
 
-  function handleSelectWorkout(workoutName: string) {
+  function handleSelectWorkout(workoutId: string, workoutName: string) {
     if (workoutSelectionMode === 'day') {
       const updatedSchedule = [...schedule];
-      updatedSchedule[selectedDayIndex] = workoutName;
+      updatedSchedule[selectedDayIndex] = { id: workoutId, name: workoutName };
       setSchedule(updatedSchedule);
     } else {
-      setCycleItems([...cycleItems, workoutName]);
+      setCycleItems([...cycleItems, { id: workoutId, name: workoutName }]);
+    }
+    setWorkoutModalVisible(false);
+  }
+
+  function handleSelectRest() {
+    if (workoutSelectionMode === 'day') {
+      const updatedSchedule = [...schedule];
+      updatedSchedule[selectedDayIndex] = { id: 'rest', name: 'Rest' };
+      setSchedule(updatedSchedule);
+    } else {
+      setCycleItems([...cycleItems, { id: 'rest', name: 'Rest' }]);
     }
     setWorkoutModalVisible(false);
   }
@@ -84,7 +120,7 @@ function RoutineSetupScreen() {
       Alert.alert('Error', 'Please enter a routine name');
       return;
     }
-    if (routineType === 'fixedDays' && !schedule.some(day => day.trim())) {
+    if (routineType === 'fixedDays' && !schedule.some(day => day !== null)) {
       Alert.alert('Error', 'Please select at least one workout or rest day');
       return;
     }
@@ -118,6 +154,19 @@ function RoutineSetupScreen() {
     }
   }
 
+  if (loading) {
+    return (
+      <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC371" />
+            <Text style={styles.loadingText}>Loading your workouts...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
   if (allWorkouts.length === 0) {
     return (
       <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.container}>
@@ -135,7 +184,7 @@ function RoutineSetupScreen() {
               style={styles.createWorkoutButton}
               onPress={() => navigation.navigate('CreateWorkoutScreen' as never)}
             >
-              <Text style={styles.createWorkoutButtonText}>Go to Create Workout</Text>
+              <Text style={styles.createWorkoutButtonText}>Create a Workout</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -185,7 +234,7 @@ function RoutineSetupScreen() {
                     onPress={() => handleOpenWorkoutModal('day', index)}
                   >
                     <Text style={styles.workoutButtonText}>
-                      {schedule[index] ? schedule[index] : 'Select Action'}
+                      {schedule[index] ? schedule[index].name : 'Select Action'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -206,7 +255,7 @@ function RoutineSetupScreen() {
               <View style={styles.cycleItems}>
                 {cycleItems.map((item, index) => (
                   <View key={index} style={styles.cycleItemContainer}>
-                    <Text style={styles.cycleItemText}>{item}</Text>
+                    <Text style={styles.cycleItemText}>{item.name}</Text>
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => handleRemoveCycleItem(index)}
@@ -235,7 +284,7 @@ function RoutineSetupScreen() {
             <ScrollView style={{ maxHeight: SCREEN_WIDTH * 0.7 }}>
               <TouchableOpacity
                 style={styles.workoutOption}
-                onPress={() => handleSelectWorkout('Rest')}
+                onPress={() => handleSelectRest()}
               >
                 <Text style={styles.workoutOptionText}>Rest</Text>
                 <MaterialIcons name="arrow-forward" size={24} color="#FF5F6D" />
@@ -244,7 +293,7 @@ function RoutineSetupScreen() {
                 <TouchableOpacity
                   key={w.id}
                   style={styles.workoutOption}
-                  onPress={() => handleSelectWorkout(w.name)}
+                  onPress={() => handleSelectWorkout(w.id, w.name)}
                 >
                   <Text style={styles.workoutOptionText}>{w.name}</Text>
                   <MaterialIcons name="arrow-forward" size={24} color="#FF5F6D" />
@@ -434,7 +483,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     flex: 1
-  }
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 18,
+    marginTop: 20,
+  },
 });
 
 export default RoutineSetupScreen;

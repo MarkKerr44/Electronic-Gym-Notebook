@@ -24,6 +24,7 @@ type RootStackParamList = {
 };
 
 type DayWorkout = {
+  id: string;
   name: string;
   status: 'scheduled' | 'completed' | 'missed';
   workoutLogId?: string;
@@ -32,8 +33,8 @@ type DayWorkout = {
 interface Routine {
   name: string;
   type: 'fixedDays' | 'cycle';
-  schedule: string[];
-  cycleItems?: string[];
+  schedule: { id: string; name: string }[];
+  cycleItems?: { id: string; name: string }[];
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -113,7 +114,8 @@ export default function RoutineCalendarScreen() {
       loopDate.setDate(today.getDate() + i);
       const dateString = formatDate(loopDate);
       if (loopDate < today || updatedWorkouts[dateString]?.length > 0) continue;
-      let dayWorkout = '';
+      
+      let dayWorkout = null;
       if (routine.type === 'fixedDays') {
         dayWorkout = routine.schedule[loopDate.getDay()];
       } else {
@@ -122,8 +124,13 @@ export default function RoutineCalendarScreen() {
         const dayInCycle = i % cycleLength;
         dayWorkout = routine.cycleItems![dayInCycle];
       }
-      if (dayWorkout?.trim()) {
-        updatedWorkouts[dateString] = [{ name: dayWorkout, status: 'scheduled' }];
+      
+      if (dayWorkout && dayWorkout.name) {
+        updatedWorkouts[dateString] = [{
+          id: dayWorkout.id,
+          name: dayWorkout.name,
+          status: 'scheduled'
+        }];
       }
     }
     await AsyncStorage.setItem('allCalendarWorkouts', JSON.stringify(updatedWorkouts));
@@ -228,7 +235,7 @@ export default function RoutineCalendarScreen() {
 
   function saveNewWorkout(name: string) {
     const arr = [...modalWorkouts];
-    arr.push({ name, status: 'scheduled' });
+    arr.push({ id: `${currentDate}-${arr.length}`, name, status: 'scheduled' });
     const updatedAll = { ...allWorkouts, [currentDate]: arr };
     setAllWorkouts(updatedAll);
     setModalWorkouts(arr);
