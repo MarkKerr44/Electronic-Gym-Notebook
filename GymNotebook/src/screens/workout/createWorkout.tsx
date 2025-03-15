@@ -60,7 +60,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
   const [tempFilterType, setTempFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
   const [filterType, setFilterType] = useState<'mostRecent' | 'oldest' | 'heaviest' | 'lightest'>('mostRecent');
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [editingExercise, setEditingExercise] = useState<{ exercise: SelectedExercise; index: number } | null>(null);
   const [tempSets, setTempSets] = useState('');
   const [tempReps, setTempReps] = useState('');
   const [tempRest, setTempRest] = useState('');
@@ -79,6 +78,9 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const deletionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [newlySelectedExercises, setNewlySelectedExercises] = useState<Set<string>>(new Set());
+  const [editingExerciseIndex, setEditingExerciseIndex] = useState<number | null>(null);
+  const [pendingEdits, setPendingEdits] = useState(null);
+  const [editExercise, setEditExercise] = useState(null); 
 
   useEffect(() => {
     if (searchTerm === '') {
@@ -192,23 +194,6 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
 
   const workoutStats = calculateWorkoutStats();
 
-  const updateExercise = () => {
-    if (!editingExercise) return;
-    const updatedExercise = {
-      ...editingExercise.exercise,
-      sets: parseInt(tempSets) || editingExercise.exercise.sets,
-      reps: parseInt(tempReps) || editingExercise.exercise.reps,
-      rest: parseInt(tempRest) || editingExercise.exercise.rest
-    };
-    setSelectedExercises(prev => {
-      const updated = [...prev];
-      updated[editingExercise.index] = updatedExercise;
-      return updated;
-    });
-    setIsEditModalVisible(false);
-    setEditingExercise(null);
-  };
-
   const renderSelectedExercise = ({ item, index, drag }: { item: SelectedExercise; index: number; drag?: () => void }) => (
     <TouchableOpacity 
       style={[
@@ -217,11 +202,7 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
       ]} 
       key={item.id} 
       onPress={() => {
-        setEditingExercise({ exercise: item, index });
-        setTempSets(item.sets.toString());
-        setTempReps(item.reps.toString());
-        setTempRest(item.rest.toString());
-        setIsEditModalVisible(true);
+        handleEditExercise(item.id);
       }}
       onLongPress={drag}
     >
@@ -359,6 +340,52 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
       return updated;
     });
   }, []);
+
+const handleEditExercise = (exerciseId: string) => {
+  const exercise = selectedExercises.find(ex => ex.id === exerciseId);
+  
+  if (!exercise) {
+    console.error('Exercise not found with ID:', exerciseId);
+    return;
+  }
+  
+  setEditExercise({...exercise});
+  
+  setTempSets(String(exercise.sets || ''));
+  setTempReps(String(exercise.reps || ''));
+  setTempRest(String(exercise.rest || ''));
+  
+  const exerciseIndex = selectedExercises.findIndex(ex => ex.id === exerciseId);
+  setEditingExerciseIndex(exerciseIndex);
+  
+  setIsEditModalVisible(true);
+};
+
+  const handleUpdateExercise = () => {
+    if (!editExercise) return;
+    
+    console.log('Updating exercise:', {
+      original: editExercise, 
+      newValues: { sets: tempSets, reps: tempReps, rest: tempRest }
+    });
+    
+    const newSets = tempSets.trim() !== '' ? Number(tempSets) : editExercise.sets;
+    const newReps = tempReps.trim() !== '' ? Number(tempReps) : editExercise.reps;
+    const newRest = tempRest.trim() !== '' ? Number(tempRest) : editExercise.rest;
+    
+    setIsEditModalVisible(false);
+    
+    setSelectedExercises(prevExercises => 
+      prevExercises.map(ex => 
+        ex.id === editExercise.id 
+          ? {...ex, sets: newSets, reps: newReps, rest: newRest}
+          : ex
+      )
+    );
+    
+    setEditExercise(null);
+    setEditingExerciseIndex(null);
+  };
 
   return (
     <LinearGradient colors={['#0f0c29', '#302b63', '#24243e']} style={styles.gradientBackground}>
@@ -534,52 +561,60 @@ const CreateWorkoutScreen: React.FC<CreateWorkoutScreenProps> = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Edit Exercise</Text>
-              <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+              <TouchableOpacity onPress={() => {
+                setIsEditModalVisible(false);
+                setEditingExerciseIndex(null);
+              }}>
                 <MaterialIcons name="close" size={24} color="#ffffff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.exerciseName}>
-              {editingExercise?.exercise.name}
-            </Text>
-            <View style={styles.inputCard}>
-              <Text style={styles.inputLabel}>Sets</Text>
-              <TextInput
-                style={styles.workoutNameInput}
-                value={tempSets}
-                onChangeText={setTempSets}
-                keyboardType="numeric"
-                placeholder="Number of sets"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={styles.inputCard}>
-              <Text style={styles.inputLabel}>Reps</Text>
-              <TextInput
-                style={styles.workoutNameInput}
-                value={tempReps}
-                onChangeText={setTempReps}
-                keyboardType="numeric"
-                placeholder="Number of reps"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={styles.inputCard}>
-              <Text style={styles.inputLabel}>Rest (seconds)</Text>
-              <TextInput
-                style={styles.workoutNameInput}
-                value={tempRest}
-                onChangeText={setTempRest}
-                keyboardType="numeric"
-                placeholder="Rest time in seconds"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <TouchableOpacity 
-              style={styles.saveWorkoutButton}
-              onPress={updateExercise}
-            >
-              <Text style={styles.saveWorkoutButtonText}>Save Changes</Text>
-            </TouchableOpacity>
+            
+            {editingExerciseIndex !== null && (
+              <>
+                <Text style={styles.exerciseName}>
+                  {selectedExercises[editingExerciseIndex]?.name}
+                </Text>
+                <View style={styles.inputCard}>
+                  <Text style={styles.inputLabel}>Sets</Text>
+                  <TextInput
+                    style={styles.workoutNameInput}
+                    value={tempSets}
+                    onChangeText={setTempSets}
+                    keyboardType="numeric"
+                    placeholder="Number of sets"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.inputCard}>
+                  <Text style={styles.inputLabel}>Reps</Text>
+                  <TextInput
+                    style={styles.workoutNameInput}
+                    value={tempReps}
+                    onChangeText={setTempReps}
+                    keyboardType="numeric"
+                    placeholder="Number of reps"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.inputCard}>
+                  <Text style={styles.inputLabel}>Rest (seconds)</Text>
+                  <TextInput
+                    style={styles.workoutNameInput}
+                    value={tempRest}
+                    onChangeText={setTempRest}
+                    keyboardType="numeric"
+                    placeholder="Rest time in seconds"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={styles.saveWorkoutButton}
+                  onPress={handleUpdateExercise}
+                >
+                  <Text style={styles.saveWorkoutButtonText}>Save Changes</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
