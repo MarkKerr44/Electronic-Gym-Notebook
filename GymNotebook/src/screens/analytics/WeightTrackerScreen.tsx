@@ -12,7 +12,9 @@ import {
   Platform,
   Modal,
   Animated,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -47,6 +49,7 @@ const WeightTrackerScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [isLoading, setIsLoading] = useState(true);
+  const weightInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     loadWeightEntries();
@@ -232,6 +235,7 @@ const WeightTrackerScreen: React.FC = () => {
           <Text style={styles.cardTitle}>Add New Entry</Text>
           <View style={styles.inputRow}>
             <TextInput
+              ref={weightInputRef}
               style={[styles.input, styles.weightInput]}
               placeholder={`Weight (${unit})`}
               placeholderTextColor="#ccc"
@@ -239,37 +243,73 @@ const WeightTrackerScreen: React.FC = () => {
               value={newWeight}
               onChangeText={setNewWeight}
               blurOnSubmit={false}
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={() => weightInputRef.current?.focus()}
             />
-            <TouchableOpacity style={styles.unitButton} onPress={toggleUnit}>
+            <TouchableOpacity 
+              style={styles.unitButton} 
+              onPress={() => {
+                toggleUnit();
+                setTimeout(() => weightInputRef.current?.focus(), 100);
+              }}
+              activeOpacity={0.7}
+            >
               <Text style={styles.unitButtonText}>Switch to {unit === 'kg' ? 'lbs' : 'kg'}</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.dateInput} onPress={() => setShowDatePicker(true)}>
+          
+          <TouchableOpacity 
+            style={styles.dateInput} 
+            onPress={() => {
+              setShowDatePicker(true);
+              setTimeout(() => weightInputRef.current?.focus(), 100);
+            }}
+          >
             <Ionicons name="calendar" size={20} color="#fff" />
             <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
           </TouchableOpacity>
+          
           {showDatePicker && (
             <DateTimePicker
               value={selectedDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onChangeDate}
+              onChange={(event, date) => {
+                onChangeDate(event, date);
+                setTimeout(() => weightInputRef.current?.focus(), 100);
+              }}
               maximumDate={new Date()}
             />
           )}
-          <TouchableOpacity style={styles.addButton} onPress={handleAddWeight}>
+          
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={() => {
+              handleAddWeight();
+              setTimeout(() => weightInputRef.current?.focus(), 100);
+            }}
+          >
             <Text style={styles.addButtonText}>Submit</Text>
           </TouchableOpacity>
         </View>
+        
         <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
           <Text style={[styles.toastText, toastType === 'success' ? styles.toastSuccess : styles.toastError]}>
             {toastMessage}
           </Text>
         </Animated.View>
       </View>
+      
       <View style={styles.historyHeader}>
         <Text style={styles.historyTitle}>History</Text>
-        <TouchableOpacity style={styles.filterButton} onPress={() => { setTempFilterType(filterType); setFilterModalVisible(true); }}>
+        <TouchableOpacity 
+          style={styles.filterButton} 
+          onPress={() => { 
+            setTempFilterType(filterType); 
+            setFilterModalVisible(true);
+          }}
+        >
           <Ionicons name="filter" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -285,17 +325,97 @@ const WeightTrackerScreen: React.FC = () => {
             <Text style={styles.loadingText}>Loading weight entries...</Text>
           </View>
         ) : (
-          <FlatList
-            data={getSortedEntries()}
-            keyExtractor={item => item.id}
-            renderItem={renderItem}
-            ListHeaderComponent={ListHeaderComponent}
-            ListEmptyComponent={<Text style={styles.noEntriesText}>No weight entries yet.</Text>}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            contentContainerStyle={styles.listContainer}
-          />
+          <View style={{ flex: 1 }}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backIcon}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Weight Tracker</Text>
+            </View>
+            
+            {/* SECOND SECTION: Input card - OUTSIDE FlatList */}
+            <View style={styles.cardWrapper}>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Add New Entry</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    ref={weightInputRef}
+                    style={[styles.input, styles.weightInput]}
+                    placeholder={`Weight (${unit})`}
+                    placeholderTextColor="#ccc"
+                    keyboardType="numeric"
+                    value={newWeight}
+                    onChangeText={setNewWeight}
+                    blurOnSubmit={false}
+                  />
+                  <TouchableOpacity 
+                    style={styles.unitButton} 
+                    onPress={toggleUnit}
+                  >
+                    <Text style={styles.unitButtonText}>Switch to {unit === 'kg' ? 'lbs' : 'kg'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity 
+                  style={styles.dateInput} 
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Ionicons name="calendar" size={20} color="#fff" />
+                  <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+                </TouchableOpacity>
+                
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onChangeDate}
+                    maximumDate={new Date()}
+                  />
+                )}
+                
+                <TouchableOpacity 
+                  style={styles.addButton} 
+                  onPress={handleAddWeight}
+                >
+                  <Text style={styles.addButtonText}>Submit</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
+                <Text style={[styles.toastText, toastType === 'success' ? styles.toastSuccess : styles.toastError]}>
+                  {toastMessage}
+                </Text>
+              </Animated.View>
+            </View>
+            
+            {/* THIRD SECTION: History title */}
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>History</Text>
+              <TouchableOpacity 
+                style={styles.filterButton} 
+                onPress={() => { 
+                  setTempFilterType(filterType); 
+                  setFilterModalVisible(true);
+                }}
+              >
+                <Ionicons name="filter" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* FOURTH SECTION: Scrollable list of entries */}
+            <FlatList
+              data={getSortedEntries()}
+              keyExtractor={item => item.id}
+              renderItem={renderItem}
+              ListEmptyComponent={<Text style={styles.noEntriesText}>No weight entries yet.</Text>}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
+          </View>
         )}
       </SafeAreaView>
+      
+      {/* Modal code remains the same */}
       {filterModalVisible && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
