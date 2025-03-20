@@ -86,35 +86,34 @@ function squatFeedback(pts: Landmark[]): string[] {
 }
 
 function bicepCurlFeedback(pts: Landmark[]): string[] {
-  const lShoulder = invertY(pts[11])
-  const lElbow = invertY(pts[13])
-  const lWrist = invertY(pts[15])
-  const rShoulder = invertY(pts[12])
-  const rElbow = invertY(pts[14])
-  const rWrist = invertY(pts[16])
-  const leftAngle = calculateAngle(lShoulder, lElbow, lWrist)
-  const rightAngle = calculateAngle(rShoulder, rElbow, rWrist)
-  const arr = []
-  if (leftAngle > 160 && rightAngle > 160) arr.push("Lower weight slowly")
-  if (leftAngle < 30 && rightAngle < 30) arr.push("Fully contracted")
-  return arr
-}
+  const lShoulder = invertY(pts[11]);
+  const lElbow = invertY(pts[13]);
+  const lWrist = invertY(pts[15]);
+  const rShoulder = invertY(pts[12]);
+  const rElbow = invertY(pts[14]);
+  const rWrist = invertY(pts[16]);
 
-function shoulderPressFeedback(pts: Landmark[]): string[] {
-  const lShoulder = invertY(pts[11])
-  const lElbow = invertY(pts[13])
-  const lHip = invertY(pts[23])
-  const rShoulder = invertY(pts[12])
-  const rElbow = invertY(pts[14])
-  const rHip = invertY(pts[24])
-  const leftAngle = calculateAngle(lHip, lShoulder, lElbow)
-  const rightAngle = calculateAngle(rHip, rShoulder, rElbow)
-  const arr = []
-  if (leftAngle < 50 && rightAngle < 50) arr.push("Arms fully up")
-  if (leftAngle > 90 && rightAngle > 90) arr.push("Control weight down")
-  return arr
-}
+  const leftAngle = calculateAngle(lShoulder, lElbow, lWrist);
+  const rightAngle = calculateAngle(rShoulder, rElbow, rWrist);
 
+  const feedback: string[] = [];
+
+  if (leftAngle > 160 && rightAngle > 160) {
+    feedback.push("Lower weight slowly");
+  }
+  if (leftAngle < 30 && rightAngle < 30) {
+    feedback.push("Fully contracted");
+  }
+
+  const leftElbowDeviation = Math.abs(lShoulder.x - lElbow.x);
+  const rightElbowDeviation = Math.abs(rShoulder.x - rElbow.x);
+  const ELBOW_DEVIATION_THRESHOLD = 0.18; 
+  if (leftElbowDeviation > ELBOW_DEVIATION_THRESHOLD || rightElbowDeviation > ELBOW_DEVIATION_THRESHOLD) {
+    feedback.push("Keep elbow static");
+  }
+
+  return feedback;
+}
 enum ExerciseType {
   None = "none",
   Squats = "squats",
@@ -211,98 +210,103 @@ export default function PoseEstimatorScreen() {
 
   const squatBestPoseRef = useRef<Landmark[] | null>(null);
 
-const checkSquatRep = useCallback((pts: Landmark[]) => {
-  const lh = invertY(pts[23]);
-  const lk = invertY(pts[25]);
-  const la = invertY(pts[27]);
-  const rh = invertY(pts[24]);
-  const rk = invertY(pts[26]);
-  const ra = invertY(pts[28]);
-  const lAngle = calculateAngle(lh, lk, la);
-  const rAngle = calculateAngle(rh, rk, ra);
-  let next = repStateRef.current;
-
-  if (lAngle < 140 && rAngle < 140) {
-    next = RepState.Middle;
-    if (!squatBestPoseRef.current) {
-      squatBestPoseRef.current = pts.slice();
-    } else {
-      const storedLH = invertY(squatBestPoseRef.current[23]);
-      const storedLK = invertY(squatBestPoseRef.current[25]);
-      const storedLA = invertY(squatBestPoseRef.current[27]);
-      const storedRH = invertY(squatBestPoseRef.current[24]);
-      const storedRK = invertY(squatBestPoseRef.current[26]);
-      const storedRA = invertY(squatBestPoseRef.current[28]);
-      const storedLAngle = calculateAngle(storedLH, storedLK, storedLA);
-      const storedRAngle = calculateAngle(storedRH, storedRK, storedRA);
-      if ((lAngle + rAngle) < (storedLAngle + storedRAngle)) {
+  const checkSquatRep = useCallback((pts: Landmark[]) => {
+    const lh = invertY(pts[23]);
+    const lk = invertY(pts[25]);
+    const la = invertY(pts[27]);
+    const rh = invertY(pts[24]);
+    const rk = invertY(pts[26]);
+    const ra = invertY(pts[28]);
+    const lAngle = calculateAngle(lh, lk, la);
+    const rAngle = calculateAngle(rh, rk, ra);
+    let next = repStateRef.current;
+    if (lAngle < 140 && rAngle < 140) {
+      next = RepState.Middle;
+      if (!squatBestPoseRef.current) {
         squatBestPoseRef.current = pts.slice();
-      }
-    }
-  } else {
-    if (repStateRef.current === RepState.Middle) {
-      const evaluationPose = squatBestPoseRef.current || pts;
-      const fb = squatFeedback(evaluationPose);
-      const evalLH = invertY(evaluationPose[23]);
-      const evalLK = invertY(evaluationPose[25]);
-      const evalLA = invertY(evaluationPose[27]);
-      const evalRH = invertY(evaluationPose[24]);
-      const evalRK = invertY(evaluationPose[26]);
-      const evalRA = invertY(evaluationPose[28]);
-      const evalLeftAngle = calculateAngle(evalLH, evalLK, evalLA);
-      const evalRightAngle = calculateAngle(evalRH, evalRK, evalRA);
-
-      if (fb.length === 0) {
-        if (evalLeftAngle <= 90 && evalRightAngle <= 90) {
-          setCorrectCount((p) => p + 1);
-          setFeedback("Great Squat!");
-        } else {
-          setCorrectCount((p) => p + 1);
-          setFeedback("Good Squat!");
-        }
       } else {
-        setBadCount((p) => p + 1);
-        setFeedback("Bad Squat! " + fb.join(", "));
+        const storedLH = invertY(squatBestPoseRef.current[23]);
+        const storedLK = invertY(squatBestPoseRef.current[25]);
+        const storedLA = invertY(squatBestPoseRef.current[27]);
+        const storedRH = invertY(squatBestPoseRef.current[24]);
+        const storedRK = invertY(squatBestPoseRef.current[26]);
+        const storedRA = invertY(squatBestPoseRef.current[28]);
+        const storedLAngle = calculateAngle(storedLH, storedLK, storedLA);
+        const storedRAngle = calculateAngle(storedRH, storedRK, storedRA);
+        if ((lAngle + rAngle) < (storedLAngle + storedRAngle)) {
+          squatBestPoseRef.current = pts.slice();
+        }
       }
-      squatBestPoseRef.current = null;
-      setTimeout(() => {
-        setFeedback("Detecting...");
-      }, 2000);
+    } else {
+      if (repStateRef.current === RepState.Middle) {
+        const evaluationPose = squatBestPoseRef.current || pts;
+        const fb = squatFeedback(evaluationPose);
+        const evalLH = invertY(evaluationPose[23]);
+        const evalLK = invertY(evaluationPose[25]);
+        const evalLA = invertY(evaluationPose[27]);
+        const evalRH = invertY(evaluationPose[24]);
+        const evalRK = invertY(evaluationPose[26]);
+        const evalRA = invertY(evaluationPose[28]);
+        const evalLeftAngle = calculateAngle(evalLH, evalLK, evalLA);
+        const evalRightAngle = calculateAngle(evalRH, evalRK, evalRA);
+        if (fb.length === 0) {
+          if (evalLeftAngle < 50 || evalRightAngle < 50) {
+            setFeedback("Not Deep Enough");
+          } else if (evalLeftAngle <= 89 && evalRightAngle <= 89) {
+            setCorrectCount((p) => p + 1);
+            setFeedback("Good Squat!");
+          } else if (evalLeftAngle <= 110 && evalRightAngle <= 110) {
+            setCorrectCount((p) => p + 1);
+            setFeedback("Great Squat!");
+          } else if (evalLeftAngle > 110 || evalRightAngle > 110) {
+            setFeedback("Deep Squat - Be careful!");
+          }
+        } else {
+          setBadCount((p) => p + 1);
+          setFeedback("Bad Squat! " + fb.join(", "));
+        }
+        squatBestPoseRef.current = null;
+        setTimeout(() => {
+          setFeedback("Detecting...");
+        }, 2000);
+      }
+      next = RepState.Start;
     }
-    next = RepState.Start;
-  }
-  repStateRef.current = next;
-}, []);
+    repStateRef.current = next;
+  }, []);
 
 
   const checkCurlRep = useCallback((pts: Landmark[]) => {
-    const lShoulder = invertY(pts[11])
-    const lElbow = invertY(pts[13])
-    const lWrist = invertY(pts[15])
-    const rShoulder = invertY(pts[12])
-    const rElbow = invertY(pts[14])
-    const rWrist = invertY(pts[16])
-    const lAngle = calculateAngle(lShoulder, lElbow, lWrist)
-    const rAngle = calculateAngle(rShoulder, rElbow, rWrist)
-    let next = repStateRef.current
+    const lShoulder = invertY(pts[11]);
+    const lElbow = invertY(pts[13]);
+    const lWrist = invertY(pts[15]);
+    const rShoulder = invertY(pts[12]);
+    const rElbow = invertY(pts[14]);
+    const rWrist = invertY(pts[16]);
+    const lAngle = calculateAngle(lShoulder, lElbow, lWrist);
+    const rAngle = calculateAngle(rShoulder, rElbow, rWrist);
+    let next = repStateRef.current;
     if (lAngle < 50 && rAngle < 50) {
-      next = RepState.Middle
+      next = RepState.Middle;
     } else {
       if (repStateRef.current === RepState.Middle) {
-        const fb = bicepCurlFeedback(pts)
+        const fb = bicepCurlFeedback(pts);
         if (fb.length <= 1) {
-          setCorrectCount((p) => p + 1)
-          setFeedback("Good Curl!")
+          setCorrectCount((p) => p + 1);
+          setFeedback("Good Curl!");
         } else {
-          setBadCount((p) => p + 1)
-          setFeedback("Bad Curl!")
+          setBadCount((p) => p + 1);
+          setFeedback("Bad Curl! " + fb.join(", "));
         }
       }
-      next = RepState.Start
+      setTimeout(() => {
+        setFeedback("Detecting...");
+      }
+      , 2000);
+      next = RepState.Start;
     }
-    repStateRef.current = next
-  }, [])
-
+    repStateRef.current = next;
+  }, []);
   const checkPressRep = useCallback((pts: Landmark[]) => {
     const lShoulder = invertY(pts[11])
     const lElbow = invertY(pts[13])
@@ -325,6 +329,10 @@ const checkSquatRep = useCallback((pts: Landmark[]) => {
           setBadCount((p) => p + 1)
           setFeedback("Bad Press!")
         }
+
+        setTimeout(() => {
+          setFeedback("Detecting...")
+        }, 2000)
       }
       next = RepState.Start
     }

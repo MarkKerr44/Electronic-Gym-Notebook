@@ -109,15 +109,16 @@ const ExerciseSelectionModal: React.FC<ExerciseSelectionModalProps> = ({
       
       const updatedExercises = [...customExercises, newExercise];
       setCustomExercises(updatedExercises);
-      
       setFilteredExercises([...updatedExercises, ...exercisesData]);
-      
       await AsyncStorage.setItem('customExercises', JSON.stringify(updatedExercises));
       
       setNewExerciseName('');
       setIsCreateModalVisible(false);
-      
+
       setSelectedExercises(prev => [...prev, newExercise]);
+
+      onToggleExercise?.(newExercise.id, true);
+
     } catch (error) {
       console.error('Error saving custom exercise:', error);
       Alert.alert('Error', 'Failed to save custom exercise.');

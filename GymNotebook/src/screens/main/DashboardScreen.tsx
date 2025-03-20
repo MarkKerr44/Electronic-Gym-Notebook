@@ -1,5 +1,4 @@
 import React, { useContext, useState, useRef, useEffect } from 'react';
-// Add the useFocusEffect hook to reload data when screen comes into focus
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -51,7 +50,6 @@ function DashboardScreen() {
   const [nextWorkoutId, setNextWorkoutId] = useState<string | null>(null);
   const [weekDays, setWeekDays] = useState<{label: string, date: Date}[]>([]);
 
-  // This effect runs only once at component mount
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -67,22 +65,18 @@ function DashboardScreen() {
       setShowOnboarding(true);
     });
     
-    // We'll remove loadRoutine() from here since we'll use useFocusEffect instead
   }, []);
   
-  // Add this focus effect to reload data every time the screen is focused
   useFocusEffect(
     React.useCallback(() => {
       console.log('Dashboard screen focused, reloading data...');
       loadRoutine();
       
       return () => {
-        // Optional cleanup when screen loses focus
       };
     }, [])
   );
 
-  // Update the weekDays calculation to also refresh on focus
   useFocusEffect(
     React.useCallback(() => {
       const generateWeekDays = () => {
@@ -104,18 +98,15 @@ function DashboardScreen() {
       
       generateWeekDays();
       
-      // We'll handle the midnight update in the original useEffect
     }, [])
   );
 
-  // Keep the original useEffect for the midnight timer
   useEffect(() => {
     const midnight = new Date();
     midnight.setHours(24, 0, 0, 0);
     const timeUntilMidnight = midnight.getTime() - new Date().getTime();
     
     const timer = setTimeout(() => {
-      // Generate new weekdays at midnight
       const today = new Date();
       const days = [];
       
@@ -135,17 +126,14 @@ function DashboardScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Update loadRoutine to properly clear old data and handle errors
   async function loadRoutine() {
     try {
       let userWorkouts: WorkoutReference[] = [];
       
-      // Clear existing data first
       setRoutine([]);
       setNextWorkout('Loading...');
       setCalendarWorkouts({});
       
-      // Try to fetch from Firestore first (preferred)
       try {
         console.log('Fetching workouts from Firestore...');
         const firestoreWorkouts = await workoutService.getUserWorkouts();
@@ -160,7 +148,6 @@ function DashboardScreen() {
         console.log('Could not load workouts from Firestore:', firestoreError);
       }
       
-      // Load calendar data
       const calendarData = await AsyncStorage.getItem('allCalendarWorkouts');
       let parsedCalendar = {};
       
@@ -170,7 +157,6 @@ function DashboardScreen() {
         setCalendarWorkouts(parsedCalendar);
       }
       
-      // Use Firestore workouts if available, otherwise fall back to AsyncStorage
       if (userWorkouts.length > 0) {
         setRoutine(userWorkouts);
         const nextWorkoutInfo = calculateNextWorkout(
