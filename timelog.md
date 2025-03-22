@@ -278,4 +278,76 @@
 - Improvements made to the weight tracker screen - 1.5 hours
 - Fixed animation issue when switching pages - 1 hour
 
+**Thursday 9th January**
+- Added android folder, can now be ran in development mode - 2 hours
+
+**Tuesday 11th February**
+- Expo removed from project, project now runs on react-native - 4 hours
+
+**Wednesday 12th February** 
+- Created a .yml file to the github page, tweaked until it worked - 3.5 hours
+
+**Sunday 16th February**
+- Configured jest - 2 hours
+- Added testing to the .yml file - 1 hour
+
+**Tuesday 18th February**
+- Started work on themes - 1.5 hours
+- Fixed bugs in WorkoutDetails.tsx - 1 hour
+- Reduced size of exercises.json and added some exercises - 1.5 hours
+- Tried to fix the build - 2 hours
+
+**Thursday 20th February** 
+- Updated WeightTracker.tsx, SettingScreen.tsx visual improvements and bug fixes - 1 hour
+
+**Friday 21st February**
+- Made improvements to the createWorkout.tsx page, added a stats tab
+- Tried to fix the build - 1 hour
+
+**Saturday 22nd February**
+- More styles added to WeightTrackerScreen.tsx - 0.5 hours
+- UserProfileScreen, navigation changed - 0.5 hours
+- exerciseid.tsx updated, added back navigation and fixed some styling - 0.5 hours
+Created AccountScreen.tsx - 1.5 hours
+
+**Sunday 23rd February**
+- Added RoutineCaldenderScreen.tsx - 2 hours
+
+**Monday 24th February**
+- RoutineSetup.tsx and RoutineCalendar.tsx updated, when a user creates a routine, the calendar is automatically populated for them - 5.5 hours
+
+**Tuesday 25th February**
+- Weights information can now be saved for each set of each exercise - 2 hours
+- Notification system implemented, achievement tracking, weekly streaks and improved the notifications UI panel - 4 hours
+- RoutineCalendarScreen.tsx updated, user can now go to workout history if they view a past workout - 2.5 hours
+
+**Wednesday 26th February** 
+- Visualisations for progress on exercises added - 2 hours
+
+**Thursday 27th February**
+- Set up firestore and implemented it across all relevant pages - 6 hours
+- Added a forgot password option to signin - 1 hour
+
+**Friday 28th February**
+- Added auth tests to the pipeline - 0.5 hours
+- Properly organised src files - 1 hour
+
+**Saturday 1st March**
+- Created tests for a few files - 1 hour
+- tests for firebase services created - 2 hours
+- GitHub Release added to project - 1.5 hours
+
+**Monday 3rd March**
+- Tried to fix the pipeline - 2 hours
+- Attempted to create tests for the PoseEstimatorScreen
+
+**Tuesday 4th March**
+- Fixed invalid date error in WorkoutHistoryScreen, fixed some other bugs on this page - 0.5
+- Implemented premade workouts with firestore - 2 hours
+
+**Thursday 6th March**
+- Users can now filter exercises when adding them to their workout - 1 hour
+- Select exercises panel is now its own file in components. The user can now create custom exercises - 2 hours
+- User can now add exercise to workout from the exerciselibrary page or the exercise page itself - 1 hour
+
 
