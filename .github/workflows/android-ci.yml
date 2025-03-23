@@ -100,13 +100,9 @@ jobs:
           name: app-release-apk
           path: GymNotebook/android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Run Auth Tests
+      - name: Run All Tests
         working-directory: GymNotebook
-        run: yarn jest --testPathPattern=__tests__/screens/auth --coverage
-
-      - name: Run Components and Services Tests
-        working-directory: GymNotebook
-        run: yarn jest "__tests__/(components|services).*\\.test\\.(ts|tsx)$" --coverage
+        run: yarn jest --coverage
 
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
