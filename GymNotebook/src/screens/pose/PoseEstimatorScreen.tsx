@@ -114,6 +114,46 @@ function bicepCurlFeedback(pts: Landmark[]): string[] {
 
   return feedback;
 }
+
+function shoulderPressFeedback(pts: Landmark[]): string[] {
+  const lShoulder = invertY(pts[11]);
+  const lElbow = invertY(pts[13]);
+  const lHip = invertY(pts[23]);
+  const rShoulder = invertY(pts[12]);
+  const rElbow = invertY(pts[14]);
+  const rHip = invertY(pts[24]);
+
+  const leftAngle = calculateAngle(lHip, lShoulder, lElbow);
+  const rightAngle = calculateAngle(rHip, rShoulder, rElbow);
+
+  const calcFlareAngle = (shoulder: Landmark, elbow: Landmark) => {
+    const dx = elbow.x - shoulder.x;
+    const dy = elbow.y - shoulder.y;
+    const mag = Math.sqrt(dx * dx + dy * dy);
+    if (mag === 0) return 0;
+    const angle = Math.acos(dx / mag) * (180 / Math.PI);
+    return Math.abs(angle); 
+  };
+  const leftDeviation = calcFlareAngle(lShoulder, lElbow);
+  const rightDeviation = calcFlareAngle(rShoulder, rElbow);
+
+  const feedback: string[] = [];
+
+  if (leftAngle < 50 && rightAngle < 50) {
+    feedback.push("Arms fully up");
+  }
+
+  if (leftAngle > 90 && rightAngle > 90) {
+    feedback.push("Control weight down");
+  }
+
+  if (leftDeviation > 45 || rightDeviation > 45) {
+    feedback.push("Keep elbows slightly forward");
+  }
+
+  return feedback;
+}
+
 enum ExerciseType {
   None = "none",
   Squats = "squats",

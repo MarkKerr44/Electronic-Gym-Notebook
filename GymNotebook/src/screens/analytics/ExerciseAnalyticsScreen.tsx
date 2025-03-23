@@ -15,6 +15,22 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { workoutService } from '../../services/workoutService';
 import type { ExerciseData } from '../../services/workoutService';
+import { Timestamp } from 'firebase/firestore';
+
+function parseDate(raw: any): Date {
+  if (raw && typeof raw === 'object' && 'toDate' in raw) {
+    return (raw as Timestamp).toDate();
+  }
+
+  if (typeof raw === 'string') {
+    const parts = raw.split('/');
+    if (parts.length === 3) {
+      return new Date(+parts[2], +parts[1] - 1, +parts[0]);
+    }
+  }
+
+  return new Date(raw);
+}
 
 export default function ExerciseAnalyticsScreen({ route }) {
   const { exerciseId, exerciseName } = route.params;
@@ -63,7 +79,7 @@ export default function ExerciseAnalyticsScreen({ route }) {
               <LineChart
                 data={{
                   labels: exerciseHistory.map(h => 
-                    new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    parseDate(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                   ),
                   datasets: [{
                     data: exerciseHistory.map(h => h.maxWeight || 0)
@@ -98,7 +114,7 @@ export default function ExerciseAnalyticsScreen({ route }) {
               <LineChart
                 data={{
                   labels: exerciseHistory.map(h => 
-                    new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    parseDate(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                   ),
                   datasets: [{
                     data: exerciseHistory.map(h => h.totalVolume)
