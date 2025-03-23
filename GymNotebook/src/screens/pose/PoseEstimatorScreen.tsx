@@ -33,11 +33,11 @@ interface Landmark {
   z: number
 }
 
-function invertY(point: Landmark): Landmark {
+export function invertY(point: Landmark): Landmark {
   return { x: point.x, y: 1 - point.y, z: point.z }
 }
 
-function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
+export function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
   const ab = { x: a.x - b.x, y: a.y - b.y }
   const cb = { x: c.x - b.x, y: c.y - b.y }
   const dot = ab.x * cb.x + ab.y * cb.y
@@ -49,9 +49,19 @@ function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
   return (angle * 180) / Math.PI
 }
 
-function isPoseValid(pts: Landmark[], idxs: number[]): boolean {
+export function isPoseValid(pts: Landmark[], idxs: number[]): boolean {
   return idxs.every((i) => pts[i] !== undefined)
 }
+
+
+export const calcFlareAngle = (shoulder: Landmark, elbow: Landmark) => {
+  const dx = elbow.x - shoulder.x;
+  const dy = elbow.y - shoulder.y;
+  const mag = Math.sqrt(dx * dx + dy * dy);
+  if (mag === 0) return 0;
+  const angle = Math.acos(dx / mag) * (180 / Math.PI);
+  return Math.abs(angle); 
+};
 
 function squatFeedback(pts: Landmark[]): string[] {
   const lh = invertY(pts[23]);
@@ -126,14 +136,7 @@ function shoulderPressFeedback(pts: Landmark[]): string[] {
   const leftAngle = calculateAngle(lHip, lShoulder, lElbow);
   const rightAngle = calculateAngle(rHip, rShoulder, rElbow);
 
-  const calcFlareAngle = (shoulder: Landmark, elbow: Landmark) => {
-    const dx = elbow.x - shoulder.x;
-    const dy = elbow.y - shoulder.y;
-    const mag = Math.sqrt(dx * dx + dy * dy);
-    if (mag === 0) return 0;
-    const angle = Math.acos(dx / mag) * (180 / Math.PI);
-    return Math.abs(angle); 
-  };
+
   const leftDeviation = calcFlareAngle(lShoulder, lElbow);
   const rightDeviation = calcFlareAngle(rShoulder, rElbow);
 
